@@ -102,20 +102,15 @@ export function ServicioDetallePage() {
           </p>
 
           <Button asChild size="lg" className="mt-6 w-full gap-2 rounded-full">
-            <Link
-              to={
-                autenticado
-                  ? `/reservar?servicio=${servicio.slug}`
-                  : `/ingresar?next=${encodeURIComponent(`/reservar?servicio=${servicio.slug}`)}`
-              }
-            >
+            <Link to={`/reservar?servicio=${servicio.slug}`}>
               <CalendarCheck className="size-4" />
               Reservar este tratamiento
             </Link>
           </Button>
           {!autenticado && (
             <p className="mt-2 text-center text-xs text-muted-foreground">
-              Necesitas iniciar sesión o crear una cuenta para reservar.
+              Puedes revisar horarios sin iniciar sesión; te pedimos cuenta
+              recién al confirmar tu hora.
             </p>
           )}
         </aside>
