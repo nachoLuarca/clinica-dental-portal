@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/hooks/useAuth"
 import { ApiError } from "@/lib/http-client"
+import { esRutValido, formatearRut, limpiarRut } from "@/lib/rut"
 import {
   esEmailValido,
   esFechaNacimientoValida,
@@ -20,6 +21,7 @@ export function RegistroPage() {
   const siguiente = parametros.get("next")
 
   const [nombre, setNombre] = useState("")
+  const [rut, setRut] = useState("")
   const [email, setEmail] = useState("")
   const [fechaNacimiento, setFechaNacimiento] = useState("")
   const [password, setPassword] = useState("")
@@ -37,6 +39,9 @@ export function RegistroPage() {
     const errores: Record<string, string> = {}
     if (nombre.trim().length < 2) {
       errores.nombre = "Ingresa tu nombre completo."
+    }
+    if (!esRutValido(rut)) {
+      errores.rut = "Ingresa un RUT válido, ej. 12.345.678-9."
     }
     if (!esEmailValido(email)) {
       errores.email = "Ingresa un correo válido."
@@ -58,6 +63,7 @@ export function RegistroPage() {
     try {
       await registrarse({
         nombre: nombre.trim(),
+        rut: limpiarRut(rut),
         email: email.trim(),
         password,
         password_confirmation: passwordConfirmacion,
@@ -112,6 +118,26 @@ export function RegistroPage() {
           {erroresCampo.nombre && (
             <p className="text-xs text-destructive">{erroresCampo.nombre}</p>
           )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="rut">RUT</Label>
+          <Input
+            id="rut"
+            inputMode="text"
+            autoComplete="off"
+            placeholder="12.345.678-9"
+            value={rut}
+            onChange={(evento) => setRut(formatearRut(evento.target.value))}
+            aria-invalid={Boolean(erroresCampo.rut)}
+            className="h-11 rounded-xl px-4"
+          />
+          {erroresCampo.rut && (
+            <p className="text-xs text-destructive">{erroresCampo.rut}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Lo vas a necesitar para revisar o cancelar tus horas sin iniciar sesión.
+          </p>
         </div>
 
         <div className="flex flex-col gap-1.5">

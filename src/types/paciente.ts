@@ -10,6 +10,8 @@ export interface Paciente {
   nombre: string
   email: string
   fecha_nacimiento?: string
+  /** Requerido desde que el registro público exige RUT (ver DatosRegistro). */
+  rut?: string
   [campo: string]: unknown
 }
 
@@ -21,6 +23,12 @@ export interface RespuestaAuth {
 
 export interface DatosRegistro {
   nombre: string
+  /**
+   * Formato chileno con o sin puntos/guion, ej. "12.345.678-9". Requerido
+   * por la API: sin RUT el paciente no puede usar después la gestión
+   * pública de citas (RUT + fecha de nacimiento, sin login).
+   */
+  rut: string
   email: string
   password: string
   password_confirmation: string
