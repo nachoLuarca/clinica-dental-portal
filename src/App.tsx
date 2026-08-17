@@ -1,8 +1,12 @@
 import { Route, Routes } from "react-router-dom"
 import { SiteLayout } from "@/components/layout/SiteLayout"
+import { RutaProtegida } from "@/components/auth/RutaProtegida"
 import { LandingPage } from "@/pages/LandingPage"
 import { CatalogoPage } from "@/pages/CatalogoPage"
 import { ServicioDetallePage } from "@/pages/ServicioDetallePage"
+import { IngresarPage } from "@/pages/IngresarPage"
+import { RegistroPage } from "@/pages/RegistroPage"
+import { CuentaPage } from "@/pages/CuentaPage"
 import { ProximamentePage } from "@/pages/ProximamentePage"
 import { NotFoundPage } from "@/pages/NotFoundPage"
 
@@ -31,15 +35,11 @@ function App() {
             />
           }
         />
-        <Route
-          path="ingresar"
-          element={
-            <ProximamentePage
-              titulo="Ingreso de pacientes en construcción"
-              descripcion="Muy pronto vas a poder registrarte e iniciar sesión para gestionar tus reservas."
-            />
-          }
-        />
+        <Route path="ingresar" element={<IngresarPage />} />
+        <Route path="registro" element={<RegistroPage />} />
+        <Route element={<RutaProtegida />}>
+          <Route path="cuenta" element={<CuentaPage />} />
+        </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

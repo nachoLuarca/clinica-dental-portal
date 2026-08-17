@@ -6,10 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { iconoDeCategoria } from "@/components/servicios/CategoriaIcono"
 import { formatClp, formatDuracion } from "@/lib/format"
 import { useServicio } from "@/hooks/useServicios"
+import { useAuth } from "@/hooks/useAuth"
 
 export function ServicioDetallePage() {
   const { slug } = useParams<{ slug: string }>()
   const { datos: servicio, cargando, error } = useServicio(slug)
+  const { autenticado } = useAuth()
 
   if (cargando) {
     return (
@@ -100,11 +102,22 @@ export function ServicioDetallePage() {
           </p>
 
           <Button asChild size="lg" className="mt-6 w-full gap-2 rounded-full">
-            <Link to={`/reservar?servicio=${servicio.slug}`}>
+            <Link
+              to={
+                autenticado
+                  ? `/reservar?servicio=${servicio.slug}`
+                  : `/ingresar?next=${encodeURIComponent(`/reservar?servicio=${servicio.slug}`)}`
+              }
+            >
               <CalendarCheck className="size-4" />
               Reservar este tratamiento
             </Link>
           </Button>
+          {!autenticado && (
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              Necesitas iniciar sesión o crear una cuenta para reservar.
+            </p>
+          )}
         </aside>
       </div>
     </section>
