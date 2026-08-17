@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { Link, NavLink } from "react-router-dom"
-import { Menu, Smile, X } from "lucide-react"
+import { LogOut, Menu, Smile, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 
 /**
@@ -17,6 +18,13 @@ const enlaces = [
 
 export function Navbar() {
   const [abierto, setAbierto] = useState(false)
+  const { autenticado, paciente, cerrarSesion } = useAuth()
+  const primerNombre = paciente?.nombre?.split(" ")[0]
+
+  function manejarCerrarSesion() {
+    setAbierto(false)
+    void cerrarSesion()
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-md">
@@ -51,9 +59,28 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Button asChild variant="ghost" className="rounded-full">
-            <Link to="/ingresar">Ingresar</Link>
-          </Button>
+          {autenticado ? (
+            <>
+              <Button asChild variant="ghost" className="gap-1.5 rounded-full">
+                <Link to="/cuenta">
+                  <User className="size-4" />
+                  {primerNombre ?? "Mi cuenta"}
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                className="gap-1.5 rounded-full text-muted-foreground"
+                onClick={manejarCerrarSesion}
+              >
+                <LogOut className="size-4" />
+                Salir
+              </Button>
+            </>
+          ) : (
+            <Button asChild variant="ghost" className="rounded-full">
+              <Link to="/ingresar">Ingresar</Link>
+            </Button>
+          )}
           <Button asChild className="rounded-full px-5">
             <Link to="/tratamientos">Reservar hora</Link>
           </Button>
@@ -90,11 +117,30 @@ export function Navbar() {
             ))}
           </nav>
           <div className="mt-3 flex flex-col gap-2">
-            <Button asChild variant="outline" className="w-full rounded-full">
-              <Link to="/ingresar" onClick={() => setAbierto(false)}>
-                Ingresar
-              </Link>
-            </Button>
+            {autenticado ? (
+              <>
+                <Button asChild variant="outline" className="w-full gap-1.5 rounded-full">
+                  <Link to="/cuenta" onClick={() => setAbierto(false)}>
+                    <User className="size-4" />
+                    {primerNombre ?? "Mi cuenta"}
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full gap-1.5 rounded-full text-muted-foreground"
+                  onClick={manejarCerrarSesion}
+                >
+                  <LogOut className="size-4" />
+                  Cerrar sesión
+                </Button>
+              </>
+            ) : (
+              <Button asChild variant="outline" className="w-full rounded-full">
+                <Link to="/ingresar" onClick={() => setAbierto(false)}>
+                  Ingresar
+                </Link>
+              </Button>
+            )}
             <Button asChild className="w-full rounded-full">
               <Link to="/tratamientos" onClick={() => setAbierto(false)}>
                 Reservar hora
