@@ -7,6 +7,7 @@ import { ServicioDetallePage } from "@/pages/ServicioDetallePage"
 import { IngresarPage } from "@/pages/IngresarPage"
 import { RegistroPage } from "@/pages/RegistroPage"
 import { CuentaPage } from "@/pages/CuentaPage"
+import { ReservaPage } from "@/pages/ReservaPage"
 import { ProximamentePage } from "@/pages/ProximamentePage"
 import { NotFoundPage } from "@/pages/NotFoundPage"
 
@@ -17,15 +18,7 @@ function App() {
         <Route index element={<LandingPage />} />
         <Route path="tratamientos" element={<CatalogoPage />} />
         <Route path="tratamientos/:slug" element={<ServicioDetallePage />} />
-        <Route
-          path="reservar"
-          element={
-            <ProximamentePage
-              titulo="El flujo de reserva está en construcción"
-              descripcion="Muy pronto vas a poder elegir profesional, ver disponibilidad en tiempo real y confirmar tu hora aquí mismo."
-            />
-          }
-        />
+        <Route path="reservar" element={<ReservaPage />} />
         <Route
           path="mis-horas"
           element={
