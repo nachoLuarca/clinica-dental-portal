@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/hooks/useAuth"
 import { ApiError } from "@/lib/http-client"
-import { esRutValido, formatearRut, limpiarRut } from "@/lib/rut"
+import { esRutValido, formatearRut, normalizarRutParaApi } from "@/lib/rut"
 import {
   esEmailValido,
   esFechaNacimientoValida,
@@ -63,7 +63,7 @@ export function RegistroPage() {
     try {
       await registrarse({
         nombre: nombre.trim(),
-        rut: limpiarRut(rut),
+        rut: normalizarRutParaApi(rut),
         email: email.trim(),
         password,
         password_confirmation: passwordConfirmacion,

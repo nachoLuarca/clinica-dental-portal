@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { ApiError } from "@/lib/http-client"
-import { limpiarRut } from "@/lib/rut"
+import { normalizarRutParaApi } from "@/lib/rut"
 import {
   buscarCitasPorRut,
   cancelarCitaPorRut,
@@ -32,7 +32,7 @@ export function useGestionHoras() {
   )
 
   async function buscar(rutIngresado: string, fechaNacimiento: string) {
-    const rut = limpiarRut(rutIngresado)
+    const rut = normalizarRutParaApi(rutIngresado)
     setBuscando(true)
     setErrorBusqueda(null)
     setCitaRecienCancelada(null)

@@ -15,6 +15,19 @@ export function limpiarRut(valor: string): string {
   return valor.replace(/[^0-9kK]/g, "").toUpperCase()
 }
 
+/**
+ * Normaliza el RUT exactamente igual que `Patient::normalizarRut` en
+ * `clinica-dental-api` (saca los puntos, deja el guión, mayúscula). Es el
+ * formato que hay que mandar a la API en cualquier endpoint que compare
+ * RUT contra lo ya guardado (registro, búsqueda/cancelación por RUT) —
+ * usar `limpiarRut` (que también saca el guión) ahí desalinea el valor
+ * enviado del que el backend normaliza y guarda, y el paciente deja de
+ * poder encontrarse a sí mismo.
+ */
+export function normalizarRutParaApi(valor: string): string {
+  return valor.replace(/\./g, "").trim().toUpperCase()
+}
+
 export function esRutValido(rut: string): boolean {
   return REGEX_RUT.test(rut.trim())
 }
