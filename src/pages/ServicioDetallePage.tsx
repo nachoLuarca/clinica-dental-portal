@@ -66,9 +66,11 @@ export function ServicioDetallePage() {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
         <div className="flex flex-col gap-6">
-          <p className="text-base leading-relaxed text-foreground/90">
-            {servicio.descripcion}
-          </p>
+          {servicio.descripcion && (
+            <p className="text-base leading-relaxed text-foreground/90">
+              {servicio.descripcion}
+            </p>
+          )}
 
           <div>
             <h2 className="font-heading text-lg font-medium">Qué incluye</h2>
@@ -88,13 +90,13 @@ export function ServicioDetallePage() {
             <span className="text-sm text-muted-foreground">Duración</span>
             <span className="flex items-center gap-1.5 text-sm font-medium">
               <Clock3 className="size-4 text-primary" />
-              {formatDuracion(servicio.duracionMinutos)}
+              {formatDuracion(servicio.duracion_minutos)}
             </span>
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-border/70 pt-3">
             <span className="text-sm text-muted-foreground">Precio de referencia</span>
             <span className="font-heading text-xl text-primary">
-              {formatClp(servicio.precioDesdeClp)}
+              {formatClp(Number(servicio.precio))}
             </span>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">

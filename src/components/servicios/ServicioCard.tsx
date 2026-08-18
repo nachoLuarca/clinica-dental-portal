@@ -4,10 +4,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatClp, formatDuracion } from "@/lib/format"
 import { iconoDeCategoria } from "@/components/servicios/CategoriaIcono"
-import type { Servicio } from "@/types/servicio"
+import type { TratamientoPublico } from "@/types/reserva"
 
 interface ServicioCardProps {
-  servicio: Servicio
+  servicio: TratamientoPublico
 }
 
 export function ServicioCard({ servicio }: ServicioCardProps) {
@@ -34,16 +34,20 @@ export function ServicioCard({ servicio }: ServicioCardProps) {
             <h3 className="font-heading text-lg leading-snug font-medium text-balance">
               {servicio.nombre}
             </h3>
-            <p className="text-sm text-muted-foreground">{servicio.resumen}</p>
+            {servicio.descripcion && (
+              <p className="line-clamp-2 text-sm text-muted-foreground">
+                {servicio.descripcion}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-between border-t border-border/70 pt-4">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Clock3 className="size-3.5" />
-              {formatDuracion(servicio.duracionMinutos)}
+              {formatDuracion(servicio.duracion_minutos)}
             </span>
             <span className="font-heading text-base text-primary">
-              Desde {formatClp(servicio.precioDesdeClp)}
+              Desde {formatClp(Number(servicio.precio))}
             </span>
           </div>
         </CardContent>

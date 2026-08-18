@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { ApiError } from "@/lib/http-client"
-import { slugificar } from "@/lib/format"
 import {
   consultarDisponibilidad,
   crearCita,
@@ -121,10 +120,9 @@ export function useReservaWizard() {
   const [citaCreada, setCitaCreada] = useState<Cita | null>(null)
   const [slotYaNoDisponible, setSlotYaNoDisponible] = useState(false)
 
-  // Catálogo real de tratamientos (independiente del mock del catálogo
-  // público, que no comparte identificadores con la API). Intenta
-  // precargar el tratamiento pedido por `?servicio=` (slug del catálogo
-  // mock o id real) como cortesía, no como fuente de verdad.
+  // Catálogo real de tratamientos (misma fuente que usa el catálogo
+  // público). Si viene `?servicio=` (slug o id) desde la ficha de
+  // detalle, precarga ese tratamiento como cortesía.
   useEffect(() => {
     let vigente = true
     listarTratamientosPublicos()
@@ -147,8 +145,7 @@ export function useReservaWizard() {
           }
         } else if (slugPedido) {
           const encontrado = lista.find(
-            (t) =>
-              slugificar(t.nombre) === slugPedido || String(t.id) === slugPedido
+            (t) => t.slug === slugPedido || String(t.id) === slugPedido
           )
           if (encontrado) setTratamientoState(encontrado)
         }
