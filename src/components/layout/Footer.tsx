@@ -1,16 +1,34 @@
+import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Clock, Mail, MapPin, Phone, Smile } from "lucide-react"
+import { useTenantBranding } from "@/hooks/useTenantBranding"
+
+const NOMBRE_CLINICA_POR_DEFECTO = "Clínica Sonrisa"
 
 export function Footer() {
+  const [logoRoto, setLogoRoto] = useState(false)
+  const { marca } = useTenantBranding()
+  const nombreClinica = marca?.nombre ?? NOMBRE_CLINICA_POR_DEFECTO
+  const mostrarLogo = Boolean(marca?.logo_url) && !logoRoto
+
   return (
     <footer className="border-t border-border/70 bg-[#0f231e] text-[#f4eee1]">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.3fr_1fr_1fr]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 font-heading text-lg font-medium">
-            <span className="flex size-9 items-center justify-center rounded-full bg-[#f4eee1] text-[#0f231e]">
-              <Smile className="size-4.5" />
-            </span>
-            Clínica Sonrisa
+            {mostrarLogo ? (
+              <img
+                src={marca?.logo_url ?? undefined}
+                alt={nombreClinica}
+                className="size-9 rounded-full object-cover"
+                onError={() => setLogoRoto(true)}
+              />
+            ) : (
+              <span className="flex size-9 items-center justify-center rounded-full bg-[#f4eee1] text-[#0f231e]">
+                <Smile className="size-4.5" />
+              </span>
+            )}
+            {nombreClinica}
           </div>
           <p className="max-w-sm text-sm text-[#f4eee1]/70">
             Odontología general y estética con hora reservable en línea. Cada
@@ -59,7 +77,7 @@ export function Footer() {
       </div>
 
       <div className="border-t border-[#f4eee1]/10 px-4 py-5 text-center text-xs text-[#f4eee1]/50 sm:px-6">
-        © {new Date().getFullYear()} Clínica Sonrisa. Datos de contacto e
+        © {new Date().getFullYear()} {nombreClinica}. Datos de contacto e
         imágenes de referencia, personalizables por clínica.
       </div>
     </footer>

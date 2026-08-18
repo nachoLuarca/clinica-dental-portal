@@ -3,13 +3,11 @@ import { Link, NavLink } from "react-router-dom"
 import { LogOut, Menu, Smile, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
+import { useTenantBranding } from "@/hooks/useTenantBranding"
 import { cn } from "@/lib/utils"
 
-/**
- * TEMPORAL: el nombre y el ícono de marca son un placeholder genérico.
- * El branding real por tenant (logo, nombre de la clínica) se resuelve en
- * el Módulo 6 consumiendo la API — no se hardcodea acá.
- */
+const NOMBRE_CLINICA_POR_DEFECTO = "Clínica Sonrisa"
+
 const enlaces = [
   { href: "/", label: "Inicio" },
   { href: "/tratamientos", label: "Tratamientos" },
@@ -18,8 +16,12 @@ const enlaces = [
 
 export function Navbar() {
   const [abierto, setAbierto] = useState(false)
+  const [logoRoto, setLogoRoto] = useState(false)
   const { autenticado, paciente, cerrarSesion } = useAuth()
+  const { marca } = useTenantBranding()
   const primerNombre = paciente?.nombre?.split(" ")[0]
+  const nombreClinica = marca?.nombre ?? NOMBRE_CLINICA_POR_DEFECTO
+  const mostrarLogo = Boolean(marca?.logo_url) && !logoRoto
 
   function manejarCerrarSesion() {
     setAbierto(false)
@@ -34,10 +36,19 @@ export function Navbar() {
           className="flex items-center gap-2 font-heading text-lg font-medium text-primary"
           onClick={() => setAbierto(false)}
         >
-          <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Smile className="size-4.5" />
-          </span>
-          Clínica Sonrisa
+          {mostrarLogo ? (
+            <img
+              src={marca?.logo_url ?? undefined}
+              alt={nombreClinica}
+              className="size-9 rounded-full object-cover"
+              onError={() => setLogoRoto(true)}
+            />
+          ) : (
+            <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Smile className="size-4.5" />
+            </span>
+          )}
+          {nombreClinica}
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
