@@ -42,6 +42,9 @@ export function TenantBrandingProvider({ children }: { children: ReactNode }) {
         if (!vigente) return
         setMarca(datos)
         aplicarColorPrimario(datos.color_primario)
+        if (datos.nombre) {
+          document.title = `${datos.nombre} — Reserva de hora en línea`
+        }
       })
       .catch(() => {
         // Fallback silencioso: se mantiene el branding por defecto del sitio.
