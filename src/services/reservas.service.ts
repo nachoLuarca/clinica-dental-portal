@@ -80,3 +80,46 @@ export async function crearCita(datos: DatosCrearCita): Promise<Cita> {
   })
   return respuesta.data
 }
+
+interface IdentificacionPaciente {
+  rut: string
+  fechaNacimiento: string
+}
+
+/**
+ * Gestión de citas SIN sesión (Módulo 5): el paciente se identifica con
+ * RUT + fecha de nacimiento en cada llamada (nunca se guarda un token). La
+ * API resuelve al paciente con ese par y responde 422 genérico si no
+ * calzan, sin distinguir "RUT inexistente" de "fecha incorrecta" — acá
+ * solo se propaga ese mensaje, no se agrega lógica propia de validación.
+ */
+export async function buscarCitasPorRut({
+  rut,
+  fechaNacimiento,
+}: IdentificacionPaciente): Promise<Cita[]> {
+  const query = new URLSearchParams({
+    rut,
+    fecha_nacimiento: fechaNacimiento,
+    per_page: "50",
+  })
+  const respuesta = await apiFetch<{ data: Cita[] }>(
+    `/publico/citas?${query.toString()}`,
+    { incluirClinica: true }
+  )
+  return respuesta.data
+}
+
+export async function cancelarCitaPorRut(
+  citaId: number,
+  { rut, fechaNacimiento }: IdentificacionPaciente
+): Promise<Cita> {
+  const query = new URLSearchParams({
+    rut,
+    fecha_nacimiento: fechaNacimiento,
+  })
+  const respuesta = await apiFetch<{ data: Cita }>(
+    `/publico/citas/${citaId}?${query.toString()}`,
+    { method: "DELETE", incluirClinica: true }
+  )
+  return respuesta.data
+}
