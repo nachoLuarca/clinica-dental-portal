@@ -8,7 +8,7 @@ import { IngresarPage } from "@/pages/IngresarPage"
 import { RegistroPage } from "@/pages/RegistroPage"
 import { CuentaPage } from "@/pages/CuentaPage"
 import { ReservaPage } from "@/pages/ReservaPage"
-import { ProximamentePage } from "@/pages/ProximamentePage"
+import { MisHorasPage } from "@/pages/MisHorasPage"
 import { NotFoundPage } from "@/pages/NotFoundPage"
 
 function App() {
@@ -19,15 +19,7 @@ function App() {
         <Route path="tratamientos" element={<CatalogoPage />} />
         <Route path="tratamientos/:slug" element={<ServicioDetallePage />} />
         <Route path="reservar" element={<ReservaPage />} />
-        <Route
-          path="mis-horas"
-          element={
-            <ProximamentePage
-              titulo="Gestión de horas por RUT en construcción"
-              descripcion="Muy pronto vas a poder ingresar tu RUT para ver tus horas pedidas y cancelarlas si lo necesitas."
-            />
-          }
-        />
+        <Route path="mis-horas" element={<MisHorasPage />} />
         <Route path="ingresar" element={<IngresarPage />} />
         <Route path="registro" element={<RegistroPage />} />
         <Route element={<RutaProtegida />}>
