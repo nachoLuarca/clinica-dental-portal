@@ -211,25 +211,35 @@ export function useReservaWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tratamiento])
 
-  const cargarProfesionales = useCallback(async () => {
-    if (profesionales !== null) return profesionales
-    setCargandoProfesionales(true)
-    setErrorProfesionales(null)
-    try {
-      const lista = await listarProfesionales()
-      setProfesionales(lista)
-      return lista
-    } catch (error) {
-      setErrorProfesionales(
-        error instanceof ApiError
-          ? error
-          : new ApiError("No pudimos cargar los profesionales.", 0)
-      )
-      return null
-    } finally {
-      setCargandoProfesionales(false)
-    }
-  }, [profesionales])
+  const cargarProfesionales = useCallback(
+    async (opciones?: { treatmentId?: number; forzar?: boolean }) => {
+      // `forzar` evita el corto-circuito del cache cuando el llamador ya
+      // sabe que la lista quedó obsoleta (cambio de tratamiento) en el
+      // mismo tick en que pidió limpiarla con `setProfesionales(null)` —
+      // ese `null` todavía no se refleja en este closure, así que sin
+      // `forzar` acá se devolvería la lista vieja en vez de pedir la nueva.
+      if (profesionales !== null && !opciones?.forzar) return profesionales
+      setCargandoProfesionales(true)
+      setErrorProfesionales(null)
+      try {
+        const lista = await listarProfesionales(
+          opciones?.treatmentId ?? tratamiento?.id
+        )
+        setProfesionales(lista)
+        return lista
+      } catch (error) {
+        setErrorProfesionales(
+          error instanceof ApiError
+            ? error
+            : new ApiError("No pudimos cargar los profesionales.", 0)
+        )
+        return null
+      } finally {
+        setCargandoProfesionales(false)
+      }
+    },
+    [profesionales, tratamiento]
+  )
 
   /**
    * En modo "cualquiera disponible" se hace UNA sola consulta sin
@@ -297,13 +307,23 @@ export function useReservaWizard() {
   )
 
   function elegirTratamiento(seleccionado: TratamientoPublico) {
+    const cambioDeTratamiento = tratamiento?.id !== seleccionado.id
     setTratamientoState(seleccionado)
     setProfesionalState(null)
     setCualquieraDisponible(false)
     setSlots([])
     setSlotSeleccionado(null)
     setPaso("profesional")
-    void cargarProfesionales()
+    // La lista de profesionales depende del tratamiento (la API la filtra
+    // por especialidad vía `treatment_id`): si cambia el tratamiento hay
+    // que invalidar el cache y volver a pedirla, no arrastrar la del
+    // tratamiento anterior.
+    if (cambioDeTratamiento) {
+      setProfesionales(null)
+      void cargarProfesionales({ treatmentId: seleccionado.id, forzar: true })
+    } else if (profesionales === null) {
+      void cargarProfesionales({ treatmentId: seleccionado.id })
+    }
   }
 
   async function elegirProfesionalEspecifico(seleccionado: Profesional) {

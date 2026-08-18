@@ -21,10 +21,18 @@ export async function listarTratamientosPublicos(): Promise<TratamientoPublico[]
   return respuesta.data
 }
 
-/** Listado público de profesionales de la clínica, sin login. */
-export async function listarProfesionales(): Promise<Profesional[]> {
+/**
+ * Listado público de profesionales de la clínica, sin login. Si se pasa
+ * `treatmentId`, la API devuelve solo los profesionales cuya especialidad
+ * cubre la categoría de ese tratamiento (mismo shape que sin filtro).
+ */
+export async function listarProfesionales(
+  treatmentId?: number
+): Promise<Profesional[]> {
+  const query =
+    treatmentId != null ? `?treatment_id=${treatmentId}` : ""
   const respuesta = await apiFetch<{ data: Profesional[] }>(
-    "/publico/profesionales",
+    `/publico/profesionales${query}`,
     { incluirClinica: true }
   )
   return respuesta.data
