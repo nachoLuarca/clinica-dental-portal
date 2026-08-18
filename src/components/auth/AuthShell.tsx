@@ -1,6 +1,9 @@
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { HeartHandshake, ShieldCheck, Sparkles } from "lucide-react"
+import { useTenantBranding } from "@/hooks/useTenantBranding"
+
+const NOMBRE_CLINICA_POR_DEFECTO = "Clínica Sonrisa"
 
 interface AuthShellProps {
   titulo: string
@@ -15,6 +18,9 @@ interface AuthShellProps {
  * genérico aparte del resto del sitio.
  */
 export function AuthShell({ titulo, subtitulo, children }: AuthShellProps) {
+  const { marca } = useTenantBranding()
+  const nombreClinica = marca?.nombre ?? NOMBRE_CLINICA_POR_DEFECTO
+
   return (
     <section className="relative overflow-hidden">
       <div
@@ -55,7 +61,7 @@ export function AuthShell({ titulo, subtitulo, children }: AuthShellProps) {
             to="/"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
           >
-            Clínica Sonrisa
+            {nombreClinica}
           </Link>
           <h1 className="mt-4 font-heading text-2xl font-medium text-balance sm:text-3xl">
             {titulo}
