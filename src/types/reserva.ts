@@ -32,23 +32,37 @@ export interface SlotDisponible {
   fin: string
   /** ISO 8601, es lo que se envía tal cual en `fecha_hora` al confirmar. */
   fecha_hora: string
+  /**
+   * Solo viene presente cuando se consulta `GET /publico/availability` sin
+   * `professional_id` (modo "cualquiera disponible"): indica qué profesional
+   * cubre ese slot específico, porque la API agrega los slots libres de
+   * todo el equipo en una sola lista.
+   */
+  professional_id?: number
 }
 
+/** `professional_id` es `null` cuando la consulta se hizo sin especificarlo. */
 export interface DisponibilidadTratamiento {
-  professional_id: number
+  professional_id: number | null
   treatment_id: number
   fecha: string
   duracion_minutos: number
   slots: SlotDisponible[]
 }
 
-/** Slot con el profesional al que pertenece, para el modo "cualquiera disponible". */
+/** Slot con el profesional al que pertenece, resuelto en el frontend para mostrarlo. */
 export interface SlotConProfesional extends SlotDisponible {
   profesional: Profesional
 }
 
 export interface DatosCrearCita {
-  professional_id: number
+  /**
+   * Opcional: si se omite, la API auto-asigna el primer profesional activo
+   * con ese horario libre. Este wizard igual lo manda siempre, porque ya
+   * sabe exactamente qué profesional cubre el slot elegido (mostrado en el
+   * paso de horario) y no quiere arriesgarse a que la API asigne a otro.
+   */
+  professional_id?: number
   treatment_id: number
   fecha_hora: string
   notas?: string
