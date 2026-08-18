@@ -21,24 +21,7 @@ export async function listarTratamientosPublicos(): Promise<TratamientoPublico[]
   return respuesta.data
 }
 
-/**
- * DUDA A REPORTAR AL BACKEND: `clinica-dental-api` no expone (todavía) un
- * endpoint público para listar profesionales — solo existe
- * `GET /staff/professionals`, protegido por el guard de staff, y
- * `professional_id` es un campo **requerido** (no nullable) tanto en
- * `GET /publico/availability` como en `POST /paciente/appointments`
- * (ver `AvailabilityRequest` y `Paciente\AppointmentStoreRequest`). Sin una
- * ruta pública análoga a `/publico/tratamientos` no hay forma de que el
- * sitio del paciente muestre profesionales para elegir, ni de implementar
- * "cualquiera disponible" (que necesitaría igual conocer al menos el
- * listado para probar disponibilidad de cada uno).
- *
- * Esta función asume el endpoint que falta, siguiendo la misma convención
- * de nombres del resto del namespace `publico` (`/publico/profesionales`).
- * Mientras no exista, responde 404 y el paso "Elegir profesional" del
- * wizard lo muestra como un aviso claro en vez de inventar un
- * comportamiento (ej. slots ficticios o un profesional fijo hardcodeado).
- */
+/** Listado público de profesionales de la clínica, sin login. */
 export async function listarProfesionales(): Promise<Profesional[]> {
   const respuesta = await apiFetch<{ data: Profesional[] }>(
     "/publico/profesionales",
@@ -48,7 +31,12 @@ export async function listarProfesionales(): Promise<Profesional[]> {
 }
 
 interface ParametrosDisponibilidad {
-  professionalId: number
+  /**
+   * Si se omite (o es `null`), la API agrega los slots libres de todos los
+   * profesionales activos del tenant (modo "cualquiera disponible"), cada
+   * uno marcado con su propio `professional_id` en `SlotDisponible`.
+   */
+  professionalId?: number | null
   treatmentId: number
   fecha: string
 }
@@ -57,10 +45,12 @@ export async function consultarDisponibilidad(
   params: ParametrosDisponibilidad
 ): Promise<DisponibilidadTratamiento> {
   const query = new URLSearchParams({
-    professional_id: String(params.professionalId),
     treatment_id: String(params.treatmentId),
     fecha: params.fecha,
   })
+  if (params.professionalId != null) {
+    query.set("professional_id", String(params.professionalId))
+  }
   const respuesta = await apiFetch<{ data: DisponibilidadTratamiento }>(
     `/publico/availability?${query.toString()}`,
     { incluirClinica: true }

@@ -234,21 +234,22 @@ export function useReservaWizard() {
     }
   }, [profesionales])
 
+  /**
+   * En modo "cualquiera disponible" se hace UNA sola consulta sin
+   * `professional_id`: la API agrega internamente los slots libres de todo
+   * el equipo (ver `AvailabilityService::forTenant`) y marca cada slot con
+   * el profesional que lo cubre. Acá solo se resuelve ese id contra la
+   * lista de profesionales para poder mostrar el nombre.
+   */
   const buscarDisponibilidad = useCallback(
     async (
       fechaConsulta: string,
       profesionalEspecifico: Profesional | null,
       modoCualquiera: boolean,
-      candidatosForzados?: Profesional[]
+      listaProfesionalesParaNombres?: Profesional[]
     ): Promise<SlotConProfesional[]> => {
       if (!tratamiento) return []
-      const candidatos = modoCualquiera
-        ? (candidatosForzados ?? profesionales ?? [])
-        : profesionalEspecifico
-          ? [profesionalEspecifico]
-          : []
-
-      if (candidatos.length === 0) {
+      if (!modoCualquiera && !profesionalEspecifico) {
         setSlots([])
         return []
       }
@@ -256,24 +257,35 @@ export function useReservaWizard() {
       setCargandoSlots(true)
       setErrorSlots(null)
       try {
-        const resultados = await Promise.all(
-          candidatos.map(async (p) => {
-            const disponibilidad = await consultarDisponibilidad({
-              professionalId: p.id,
-              treatmentId: tratamiento.id,
-              fecha: fechaConsulta,
-            })
-            return disponibilidad.slots.map((slot) => ({
+        const disponibilidad = await consultarDisponibilidad({
+          professionalId: modoCualquiera ? null : profesionalEspecifico!.id,
+          treatmentId: tratamiento.id,
+          fecha: fechaConsulta,
+        })
+
+        const listaNombres = listaProfesionalesParaNombres ?? profesionales ?? []
+        const conProfesional = disponibilidad.slots
+          .map((slot): SlotConProfesional => {
+            if (!modoCualquiera) {
+              return { ...slot, profesional: profesionalEspecifico! }
+            }
+            const encontrado = listaNombres.find(
+              (p) => p.id === slot.professional_id
+            )
+            return {
               ...slot,
-              profesional: p,
-            }))
+              profesional: encontrado ?? {
+                id: slot.professional_id ?? 0,
+                nombre: "Profesional del equipo",
+                apellido: null,
+                especialidad: null,
+              },
+            }
           })
-        )
-        const todos = resultados
-          .flat()
           .sort((a, b) => a.fecha_hora.localeCompare(b.fecha_hora))
-        setSlots(todos)
-        return todos
+
+        setSlots(conProfesional)
+        return conProfesional
       } catch {
         setErrorSlots(
           "No pudimos consultar la disponibilidad en este momento. Intenta de nuevo."
