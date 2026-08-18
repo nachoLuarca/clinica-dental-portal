@@ -1,8 +1,9 @@
 /**
  * Formas de datos del flujo de reserva tal como las expone
- * `clinica-dental-api`. A diferencia de `types/servicio.ts` (catálogo con
- * contenido rico, hoy mock), estos tipos reflejan el contrato real y
- * mínimo que confirma el backend (ver `AvailabilityRequest`,
+ * `clinica-dental-api`. `TratamientoPublico` es también la fuente única
+ * del catálogo (landing, `/tratamientos` y ficha de detalle): no hay un
+ * tipo de catálogo separado, todo consume el mismo contrato real que
+ * confirma el backend (ver `AvailabilityRequest`,
  * `Paciente\AppointmentStoreRequest`, `AvailabilityService`,
  * `AppointmentService` en `clinica-dental-api`).
  */
@@ -17,6 +18,11 @@ export interface TratamientoPublico {
   duracion_minutos: number
   es_diferencial: boolean
   activo: boolean
+  categoria: string
+  /** Qué incluye la sesión/tratamiento, para la ficha de detalle. */
+  incluye: string[]
+  /** Identificador legible en URL, autogenerado y único por clínica. */
+  slug: string
 }
 
 /** Profesional tal como aparece anidado en una cita ya creada. */

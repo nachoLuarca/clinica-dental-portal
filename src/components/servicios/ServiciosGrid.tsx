@@ -1,9 +1,9 @@
 import { ServicioCard } from "@/components/servicios/ServicioCard"
 import { ServicioCardSkeleton } from "@/components/servicios/ServicioCardSkeleton"
-import type { Servicio } from "@/types/servicio"
+import type { TratamientoPublico } from "@/types/reserva"
 
 interface ServiciosGridProps {
-  servicios: Servicio[]
+  servicios: TratamientoPublico[]
   cargando?: boolean
 }
 
