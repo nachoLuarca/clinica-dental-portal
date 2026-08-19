@@ -147,7 +147,14 @@ export function useReservaWizard() {
           const encontrado = lista.find(
             (t) => t.slug === slugPedido || String(t.id) === slugPedido
           )
-          if (encontrado) setTratamientoState(encontrado)
+          if (encontrado) {
+            // Viene desde la ficha de detalle con el tratamiento ya
+            // elegido: saltar directo a "profesional" en vez de
+            // mostrar de nuevo el listado completo del paso 1.
+            setTratamientoState(encontrado)
+            setPaso("profesional")
+            void cargarProfesionales({ treatmentId: encontrado.id, forzar: true })
+          }
         }
       })
       .catch(() => {
