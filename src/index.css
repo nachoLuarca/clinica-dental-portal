@@ -2,21 +2,28 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/fraunces";
-@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/inter";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
  * Sistema tipográfico de la clínica:
- * - Fraunces (serif variable, con carácter) para titulares: transmite calidez
- *   y cercanía sin perder seriedad clínica. Evita el look "tech/corporativo"
- *   de una sans por defecto.
- * - Plus Jakarta Sans (sans variable, geométrica y redondeada) para el cuerpo:
- *   legible en mobile, con más personalidad que Inter/system-ui.
+ * - Fraunces (serif variable, con carácter propio) para titulares y horas
+ *   grandes: le da al sitio un aire de consulta boutique, no de plantilla
+ *   médica genérica.
+ * - Inter (sans variable, geométrica) para el cuerpo: máxima legibilidad en
+ *   mobile sin perder personalidad frente a un system-ui por defecto.
+ * - IBM Plex Mono, discreta, reservada solo para horas, fechas y precios:
+ *   les da a esos datos un tratamiento de "dato preciso" y los distingue
+ *   tipográficamente del resto del texto editorial.
  */
 @theme inline {
     --font-heading: "Fraunces Variable", ui-serif, Georgia, serif;
-    --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Courier New", monospace;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -34,6 +41,8 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-success-foreground: var(--success-foreground);
+    --color-success: var(--success);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -58,80 +67,86 @@
 }
 
 /*
- * Paleta propia de la clínica ("Menta profunda + Damasco"):
- * - Verde pino/menta profunda como color de marca (salud, calma, confianza),
- *   evitando el azul genérico de plantilla médica.
- * - Damasco/coral cálido como acento para llamadas a la acción (reservar,
- *   confirmar) — aporta calidez humana al flujo de reserva.
- * - Fondo crema cálido en vez de blanco/gris puro de template.
+ * Paleta propia de la clínica ("Consultorio + Coral"):
+ * - Verde consultorio profundo como color de marca (calma clínica,
+ *   confianza), evitando el azul/celeste genérico de plantilla médica.
+ * - Porcelana cálido como fondo base, en vez de blanco o gris de template.
+ * - Coral como único acento, reservado para llamadas a la acción puntuales
+ *   (reservar, confirmar, seleccionar horario) — nunca como fondo grande.
+ * - Verde salvia propio para estados de éxito, distinto del verde de marca,
+ *   así "reservado con éxito" se lee distinto de "esto es información".
  */
 :root {
-    --background: #fbf6ee;
-    --foreground: #16231d;
+    --background: #f6f2ed;
+    --foreground: #1a1a18;
     --card: #ffffff;
-    --card-foreground: #16231d;
+    --card-foreground: #1a1a18;
     --popover: #ffffff;
-    --popover-foreground: #16231d;
-    --primary: #0f5d52;
-    --primary-foreground: #fbf6ee;
-    --secondary: #ffe6d8;
-    --secondary-foreground: #7a2e12;
-    --muted: #f0e9db;
-    --muted-foreground: #6b6155;
-    --accent: #ff7a59;
-    --accent-foreground: #241006;
-    --destructive: #c4432b;
-    --border: #e4dcc9;
-    --input: #e4dcc9;
-    --ring: #0f5d52;
-    --chart-1: #0f5d52;
-    --chart-2: #ff7a59;
-    --chart-3: #d99a3d;
-    --chart-4: #6b8f84;
-    --chart-5: #7a2e12;
-    --radius: 1rem;
-    --sidebar: #f0e9db;
-    --sidebar-foreground: #16231d;
-    --sidebar-primary: #0f5d52;
-    --sidebar-primary-foreground: #fbf6ee;
-    --sidebar-accent: #ffe6d8;
-    --sidebar-accent-foreground: #7a2e12;
-    --sidebar-border: #e4dcc9;
-    --sidebar-ring: #0f5d52;
+    --popover-foreground: #1a1a18;
+    --primary: #0b3b36;
+    --primary-foreground: #f6f2ed;
+    --secondary: #fae4de;
+    --secondary-foreground: #7a2e1f;
+    --muted: #ece5d9;
+    --muted-foreground: #6b6459;
+    --accent: #e8695c;
+    --accent-foreground: #2a1109;
+    --destructive: #a8382a;
+    --success: #2f7a6e;
+    --success-foreground: #f6f2ed;
+    --border: #c9c2b4;
+    --input: #c9c2b4;
+    --ring: #0b3b36;
+    --chart-1: #0b3b36;
+    --chart-2: #e8695c;
+    --chart-3: #2f7a6e;
+    --chart-4: #b08a4e;
+    --chart-5: #7a2e1f;
+    --radius: 0.85rem;
+    --sidebar: #ece5d9;
+    --sidebar-foreground: #1a1a18;
+    --sidebar-primary: #0b3b36;
+    --sidebar-primary-foreground: #f6f2ed;
+    --sidebar-accent: #fae4de;
+    --sidebar-accent-foreground: #7a2e1f;
+    --sidebar-border: #c9c2b4;
+    --sidebar-ring: #0b3b36;
 }
 
 .dark {
     --background: #10201c;
-    --foreground: #f4eee1;
+    --foreground: #f2ede4;
     --card: #16302a;
-    --card-foreground: #f4eee1;
+    --card-foreground: #f2ede4;
     --popover: #16302a;
-    --popover-foreground: #f4eee1;
-    --primary: #4fbfae;
+    --popover-foreground: #f2ede4;
+    --primary: #6cbdaf;
     --primary-foreground: #0b1f1b;
-    --secondary: #2b4038;
-    --secondary-foreground: #f4eee1;
+    --secondary: #3a2b26;
+    --secondary-foreground: #f4d9cf;
     --muted: #223530;
-    --muted-foreground: #b7c9c2;
-    --accent: #ff8f72;
-    --accent-foreground: #1f0b04;
-    --destructive: #e8604a;
-    --border: color-mix(in oklch, #f4eee1 12%, transparent);
-    --input: color-mix(in oklch, #f4eee1 16%, transparent);
-    --ring: #4fbfae;
-    --chart-1: #4fbfae;
-    --chart-2: #ff8f72;
-    --chart-3: #e0b25c;
-    --chart-4: #8fb0a6;
-    --chart-5: #ff8f72;
+    --muted-foreground: #bcc9c2;
+    --accent: #f0836f;
+    --accent-foreground: #250e07;
+    --destructive: #e17a67;
+    --success: #5fb3a3;
+    --success-foreground: #0b1f1b;
+    --border: color-mix(in oklch, #f2ede4 12%, transparent);
+    --input: color-mix(in oklch, #f2ede4 16%, transparent);
+    --ring: #6cbdaf;
+    --chart-1: #6cbdaf;
+    --chart-2: #f0836f;
+    --chart-3: #5fb3a3;
+    --chart-4: #d1b06f;
+    --chart-5: #f4d9cf;
     --sidebar: #16302a;
-    --sidebar-foreground: #f4eee1;
-    --sidebar-primary: #4fbfae;
+    --sidebar-foreground: #f2ede4;
+    --sidebar-primary: #6cbdaf;
     --sidebar-primary-foreground: #0b1f1b;
-    --sidebar-accent: #2b4038;
-    --sidebar-accent-foreground: #f4eee1;
-    --sidebar-border: color-mix(in oklch, #f4eee1 12%, transparent);
-    --sidebar-ring: #4fbfae;
+    --sidebar-accent: #3a2b26;
+    --sidebar-accent-foreground: #f4d9cf;
+    --sidebar-border: color-mix(in oklch, #f2ede4 12%, transparent);
+    --sidebar-ring: #6cbdaf;
 }
 
 @layer base {

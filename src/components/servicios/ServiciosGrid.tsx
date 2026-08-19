@@ -7,11 +7,16 @@ interface ServiciosGridProps {
   cargando?: boolean
 }
 
+/**
+ * Índice editorial de tratamientos: filas separadas por un filete fino, en
+ * vez de una grilla de tarjetas repetidas. Pensado como la tabla de
+ * contenidos de una revista, no como un listado de resultados de CRUD.
+ */
 export function ServiciosGrid({ servicios, cargando }: ServiciosGridProps) {
   if (cargando) {
     return (
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, indice) => (
+      <div className="flex flex-col divide-y divide-border/70 rounded-3xl bg-card px-5 ring-1 ring-border/70 sm:px-8">
+        {Array.from({ length: 5 }).map((_, indice) => (
           <ServicioCardSkeleton key={indice} />
         ))}
       </div>
@@ -30,15 +35,9 @@ export function ServiciosGrid({ servicios, cargando }: ServiciosGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {servicios.map((servicio, indice) => (
-        <div
-          key={servicio.id}
-          className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
-          style={{ animationDelay: `${Math.min(indice, 8) * 60}ms` }}
-        >
-          <ServicioCard servicio={servicio} />
-        </div>
+    <div className="flex flex-col divide-y divide-border/70 rounded-3xl bg-card px-5 ring-1 ring-border/70 sm:px-8">
+      {servicios.map((servicio) => (
+        <ServicioCard key={servicio.id} servicio={servicio} />
       ))}
     </div>
   )

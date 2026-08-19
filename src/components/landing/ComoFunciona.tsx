@@ -47,7 +47,7 @@ export function ComoFunciona() {
           />
           {pasos.map(({ numero, icono: Icono, titulo, descripcion }) => (
             <div key={numero} className="relative flex flex-col gap-4">
-              <span className="relative z-10 flex size-12 items-center justify-center rounded-full border-2 border-primary bg-background font-heading text-sm font-medium text-primary">
+              <span className="relative z-10 flex size-12 items-center justify-center rounded-full border-2 border-primary bg-background font-mono text-sm font-medium text-primary">
                 {numero}
               </span>
               <div className="flex items-center gap-2 text-primary">

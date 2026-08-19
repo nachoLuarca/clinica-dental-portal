@@ -3,7 +3,7 @@ import { CalendarClock, MessagesSquare, ShieldCheck } from "lucide-react"
 const beneficios = [
   {
     icono: CalendarClock,
-    titulo: "Disponibilidad real, al tiro",
+    titulo: "Disponibilidad real, al instante",
     descripcion:
       "Ves los horarios libres de cada profesional en el momento, sin esperar confirmación por teléfono.",
   },

@@ -21,7 +21,7 @@ export function CatalogoPage() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-18">
       <div className="max-w-2xl">
-        <span className="text-xs font-medium tracking-wide text-accent uppercase">
+        <span className="font-mono text-xs font-medium tracking-[0.14em] text-accent uppercase">
           Catálogo
         </span>
         <h1 className="mt-2 font-heading text-3xl font-medium sm:text-4xl">
