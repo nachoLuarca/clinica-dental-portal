@@ -22,7 +22,7 @@ export function CtaBanner() {
           variant="secondary"
           className="gap-2 rounded-full bg-accent px-7 text-accent-foreground hover:bg-accent/90"
         >
-          <Link to="/tratamientos">Reservar mi hora</Link>
+          <Link to="/reservar">Reservar mi hora</Link>
         </Button>
       </div>
     </section>

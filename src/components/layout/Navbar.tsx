@@ -93,7 +93,7 @@ export function Navbar() {
             </Button>
           )}
           <Button asChild className="rounded-full px-5">
-            <Link to="/tratamientos">Reservar hora</Link>
+            <Link to="/reservar">Reservar hora</Link>
           </Button>
         </div>
 
