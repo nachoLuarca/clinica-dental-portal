@@ -88,14 +88,14 @@ export function ServicioDetallePage() {
         <aside className="h-fit rounded-3xl bg-card p-6 ring-1 ring-border/70">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Duración</span>
-            <span className="flex items-center gap-1.5 text-sm font-medium">
+            <span className="flex items-center gap-1.5 font-mono text-sm font-medium">
               <Clock3 className="size-4 text-primary" />
               {formatDuracion(servicio.duracion_minutos)}
             </span>
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-border/70 pt-3">
             <span className="text-sm text-muted-foreground">Precio de referencia</span>
-            <span className="font-heading text-xl text-primary">
+            <span className="font-mono text-xl font-medium text-primary">
               {formatClp(Number(servicio.precio))}
             </span>
           </div>

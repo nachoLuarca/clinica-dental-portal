@@ -35,8 +35,8 @@ export function PasoConfirmar({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-[#0a3d36] p-6 text-primary-foreground">
-        <p className="text-xs tracking-wide text-primary-foreground/70 uppercase">
+      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-[#082a26] p-6 text-primary-foreground">
+        <p className="font-mono text-xs tracking-[0.14em] text-primary-foreground/70 uppercase">
           Vas a reservar
         </p>
         <p className="mt-1 font-heading text-xl font-medium text-balance">
@@ -52,7 +52,7 @@ export function PasoConfirmar({
           </div>
           <div className="flex items-center gap-2.5">
             <CalendarCheck className="size-4 shrink-0 text-primary-foreground/70" />
-            <span className="capitalize">
+            <span className="font-mono capitalize">
               {fechaLegible}, {slot.inicio} - {slot.fin}
             </span>
           </div>
@@ -62,7 +62,7 @@ export function PasoConfirmar({
           <span className="text-primary-foreground/70">
             {formatDuracion(tratamiento.duracion_minutos)}
           </span>
-          <span className="font-heading text-lg">
+          <span className="font-mono text-lg">
             {formatClp(Number(tratamiento.precio))}
           </span>
         </div>

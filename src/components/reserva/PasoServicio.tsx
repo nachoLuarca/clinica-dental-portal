@@ -67,11 +67,11 @@ export function PasoServicio({
                 {t.descripcion}
               </p>
             )}
-            <div className="mt-1 flex items-center justify-between text-xs">
+            <div className="mt-1 flex items-center justify-between font-mono text-xs">
               <span className="text-muted-foreground">
                 {formatDuracion(t.duracion_minutos)}
               </span>
-              <span className="font-heading font-medium text-primary">
+              <span className="font-medium text-primary">
                 {formatClp(Number(t.precio))}
               </span>
             </div>

@@ -12,7 +12,7 @@ export function Footer() {
   const mostrarLogo = Boolean(marca?.logo_url) && !logoRoto
 
   return (
-    <footer className="border-t border-border/70 bg-[#0f231e] text-[#f4eee1]">
+    <footer className="border-t border-border/70 bg-[#082722] text-[#f6f2ed]">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.3fr_1fr_1fr]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 font-heading text-lg font-medium">
@@ -24,59 +24,59 @@ export function Footer() {
                 onError={() => setLogoRoto(true)}
               />
             ) : (
-              <span className="flex size-9 items-center justify-center rounded-full bg-[#f4eee1] text-[#0f231e]">
+              <span className="flex size-9 items-center justify-center rounded-full bg-[#f6f2ed] text-[#082722]">
                 <Smile className="size-4.5" />
               </span>
             )}
             {nombreClinica}
           </div>
-          <p className="max-w-sm text-sm text-[#f4eee1]/70">
+          <p className="max-w-sm text-sm text-[#f6f2ed]/70">
             Odontología general y estética con hora reservable en línea. Cada
             clínica de la red administra su propio catálogo y disponibilidad.
           </p>
         </div>
 
         <div className="flex flex-col gap-3 text-sm">
-          <span className="font-heading text-base text-[#f4eee1]">Navegación</span>
-          <Link to="/" className="text-[#f4eee1]/70 transition-colors hover:text-[#f4eee1]">
+          <span className="font-heading text-base text-[#f6f2ed]">Navegación</span>
+          <Link to="/" className="text-[#f6f2ed]/70 transition-colors hover:text-[#f6f2ed]">
             Inicio
           </Link>
           <Link
             to="/tratamientos"
-            className="text-[#f4eee1]/70 transition-colors hover:text-[#f4eee1]"
+            className="text-[#f6f2ed]/70 transition-colors hover:text-[#f6f2ed]"
           >
             Tratamientos
           </Link>
           <Link
             to="/mis-horas"
-            className="text-[#f4eee1]/70 transition-colors hover:text-[#f4eee1]"
+            className="text-[#f6f2ed]/70 transition-colors hover:text-[#f6f2ed]"
           >
             Gestionar mi hora
           </Link>
         </div>
 
-        <div className="flex flex-col gap-3 text-sm text-[#f4eee1]/70">
-          <span className="font-heading text-base text-[#f4eee1]">Contacto</span>
+        <div className="flex flex-col gap-3 text-sm text-[#f6f2ed]/70">
+          <span className="font-heading text-base text-[#f6f2ed]">Contacto</span>
           <span className="flex items-center gap-2">
-            <MapPin className="size-4 shrink-0 text-[#ff8f72]" />
+            <MapPin className="size-4 shrink-0 text-[#e8695c]" />
             Av. Providencia 1234, Providencia, Santiago
           </span>
           <span className="flex items-center gap-2">
-            <Phone className="size-4 shrink-0 text-[#ff8f72]" />
+            <Phone className="size-4 shrink-0 text-[#e8695c]" />
             +56 9 1234 5678
           </span>
           <span className="flex items-center gap-2">
-            <Mail className="size-4 shrink-0 text-[#ff8f72]" />
+            <Mail className="size-4 shrink-0 text-[#e8695c]" />
             hola@clinicasonrisa.cl
           </span>
           <span className="flex items-center gap-2">
-            <Clock className="size-4 shrink-0 text-[#ff8f72]" />
+            <Clock className="size-4 shrink-0 text-[#e8695c]" />
             Lun a vie 9:00–19:00 · Sáb 9:00–13:00
           </span>
         </div>
       </div>
 
-      <div className="border-t border-[#f4eee1]/10 px-4 py-5 text-center text-xs text-[#f4eee1]/50 sm:px-6">
+      <div className="border-t border-[#f6f2ed]/10 px-4 py-5 text-center text-xs text-[#f6f2ed]/50 sm:px-6">
         © {new Date().getFullYear()} {nombreClinica}. Datos de contacto e
         imágenes de referencia, personalizables por clínica.
       </div>
