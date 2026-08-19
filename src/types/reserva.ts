@@ -19,6 +19,9 @@ export interface TratamientoPublico {
   es_diferencial: boolean
   activo: boolean
   categoria: string
+  especialidad_id: number | null
+  /** `null` cuando el tratamiento no tiene especialidad asignada. */
+  especialidad: { id: number; nombre: string } | null
   /** Qué incluye la sesión/tratamiento, para la ficha de detalle. */
   incluye: string[]
   /** Identificador legible en URL, autogenerado y único por clínica. */
