@@ -26,9 +26,9 @@ export function ServiciosGrid({ servicios, cargando }: ServiciosGridProps) {
   if (servicios.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-16 text-center">
-        <p className="font-heading text-lg">No hay tratamientos en esta categoría</p>
+        <p className="font-heading text-lg">No hay tratamientos en esta especialidad</p>
         <p className="text-sm text-muted-foreground">
-          Prueba con otra categoría o revisa el catálogo completo.
+          Prueba con otra especialidad o revisa el catálogo completo.
         </p>
       </div>
     )

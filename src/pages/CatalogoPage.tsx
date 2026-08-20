@@ -5,18 +5,30 @@ import { useServicios } from "@/hooks/useServicios"
 
 export function CatalogoPage() {
   const { datos: servicios, cargando, error } = useServicios()
-  const [categoriaActiva, setCategoriaActiva] = useState(TODAS)
+  const [especialidadActiva, setEspecialidadActiva] = useState(TODAS)
 
-  const categorias = useMemo(() => {
+  // Las pestañas de filtro reflejan las especialidades reales del backend
+  // (`especialidad.nombre`, catálogo fijo vinculado por FK), no `categoria`
+  // (texto libre, solo descriptivo). Un tratamiento sin especialidad
+  // asignada no genera una pestaña inventada: solo aparece bajo "Todos".
+  const especialidades = useMemo(() => {
     if (!servicios) return []
-    return Array.from(new Set(servicios.map((servicio) => servicio.categoria)))
+    return Array.from(
+      new Set(
+        servicios
+          .map((servicio) => servicio.especialidad?.nombre)
+          .filter((nombre): nombre is string => Boolean(nombre))
+      )
+    )
   }, [servicios])
 
   const serviciosFiltrados = useMemo(() => {
     if (!servicios) return []
-    if (categoriaActiva === TODAS) return servicios
-    return servicios.filter((servicio) => servicio.categoria === categoriaActiva)
-  }, [servicios, categoriaActiva])
+    if (especialidadActiva === TODAS) return servicios
+    return servicios.filter(
+      (servicio) => servicio.especialidad?.nombre === especialidadActiva
+    )
+  }, [servicios, especialidadActiva])
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-18">
@@ -35,11 +47,11 @@ export function CatalogoPage() {
       </div>
 
       <div className="mt-8">
-        {categorias.length > 0 && (
+        {especialidades.length > 0 && (
           <FiltroCategorias
-            categorias={categorias}
-            categoriaActiva={categoriaActiva}
-            onCambiarCategoria={setCategoriaActiva}
+            categorias={especialidades}
+            categoriaActiva={especialidadActiva}
+            onCambiarCategoria={setEspecialidadActiva}
           />
         )}
       </div>
