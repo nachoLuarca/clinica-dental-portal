@@ -1,15 +1,16 @@
 import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
 import { PasoConfirmar } from "@/components/reserva/PasoConfirmar"
 import { PasoExito } from "@/components/reserva/PasoExito"
 import { PasoHorario } from "@/components/reserva/PasoHorario"
+import { PasoIdentificacion } from "@/components/reserva/PasoIdentificacion"
 import { PasoProfesional } from "@/components/reserva/PasoProfesional"
 import { PasoServicio } from "@/components/reserva/PasoServicio"
 import { StepperReserva } from "@/components/reserva/StepperReserva"
 import { useReservaWizard } from "@/hooks/useReservaWizard"
 
 const TITULOS: Record<string, string> = {
+  identificacion: "Identifícate con tu RUT",
   servicio: "¿Qué tratamiento necesitas?",
   profesional: "¿Con quién prefieres atenderte?",
   horario: "Elige un horario",
@@ -34,10 +35,11 @@ export function ReservaPage() {
         key={wizard.paso}
         className="animate-in fade-in slide-in-from-bottom-2 duration-300"
       >
-        {wizard.paso !== "servicio" && wizard.paso !== "exito" && (
+        {wizard.paso !== "identificacion" && wizard.paso !== "exito" && (
           <button
             type="button"
             onClick={() => {
+              if (wizard.paso === "servicio") wizard.volverAPaso("identificacion")
               if (wizard.paso === "profesional") wizard.volverAPaso("servicio")
               if (wizard.paso === "horario") wizard.volverAPaso("profesional")
               if (wizard.paso === "confirmar") wizard.volverAPaso("horario")
@@ -53,6 +55,22 @@ export function ReservaPage() {
           <h1 className="mb-6 font-heading text-2xl font-medium text-balance sm:text-3xl">
             {titulo}
           </h1>
+        )}
+
+        {wizard.paso === "identificacion" && (
+          <PasoIdentificacion
+            verificandoRut={wizard.verificandoRut}
+            errorVerificarRut={wizard.errorVerificarRut}
+            pacienteExiste={wizard.pacienteExiste}
+            onVerificarRut={(rut, token) =>
+              void wizard.verificarRutYAvanzar(rut, token)
+            }
+            creandoPaciente={wizard.creandoPaciente}
+            errorAltaPaciente={wizard.errorAltaPaciente}
+            onCrearPaciente={(datos) =>
+              void wizard.crearPacienteYAvanzar(datos)
+            }
+          />
         )}
 
         {wizard.paso === "servicio" && (
@@ -88,41 +106,19 @@ export function ReservaPage() {
           />
         )}
 
-        {wizard.paso === "confirmar" && wizard.tratamiento && (
-          <>
-            {wizard.slotSeleccionado ? (
-              <PasoConfirmar
-                tratamiento={wizard.tratamiento}
-                slot={wizard.slotSeleccionado}
-                notas={wizard.notas}
-                onCambiarNotas={wizard.setNotas}
-                enviando={wizard.creandoCita}
-                error={wizard.errorCita}
-                onConfirmar={() => void wizard.confirmarReserva()}
-              />
-            ) : wizard.cargandoSlots || wizard.cargandoProfesionales ? (
-              <div className="flex flex-col gap-3">
-                <Skeleton className="h-24 w-full rounded-2xl" />
-                <Skeleton className="h-40 w-full rounded-2xl" />
-              </div>
-            ) : (
-              <div className="flex flex-col items-start gap-3 rounded-2xl bg-destructive/10 p-5">
-                <p className="text-sm text-destructive">
-                  No pudimos recuperar el horario que habías elegido. Elige
-                  uno nuevo.
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="rounded-full"
-                  onClick={() => wizard.volverAPaso("horario")}
-                >
-                  Elegir horario
-                </Button>
-              </div>
-            )}
-          </>
-        )}
+        {wizard.paso === "confirmar" &&
+          wizard.tratamiento &&
+          wizard.slotSeleccionado && (
+            <PasoConfirmar
+              tratamiento={wizard.tratamiento}
+              slot={wizard.slotSeleccionado}
+              notas={wizard.notas}
+              onCambiarNotas={wizard.setNotas}
+              enviando={wizard.creandoCita}
+              error={wizard.errorCita}
+              onConfirmar={(token) => void wizard.confirmarReserva(token)}
+            />
+          )}
 
         {wizard.paso === "exito" && wizard.citaCreada && (
           <PasoExito cita={wizard.citaCreada} onReservarOtra={wizard.reiniciar} />

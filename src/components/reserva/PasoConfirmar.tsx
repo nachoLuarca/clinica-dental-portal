@@ -1,6 +1,11 @@
+import { useEffect, useRef, useState } from "react"
 import { CalendarCheck, Loader2, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/identificacion/TurnstileWidget"
 import { formatClp, formatDuracion } from "@/lib/format"
 import type { SlotConProfesional, TratamientoPublico } from "@/types/reserva"
 
@@ -11,7 +16,7 @@ interface PasoConfirmarProps {
   onCambiarNotas: (valor: string) => void
   enviando: boolean
   error: string | null
-  onConfirmar: () => void
+  onConfirmar: (turnstileToken: string) => void
 }
 
 const formateadorFecha = new Intl.DateTimeFormat("es-CL", {
@@ -32,6 +37,19 @@ export function PasoConfirmar({
 }: PasoConfirmarProps) {
   const fecha = new Date(slot.fecha_hora)
   const fechaLegible = formateadorFecha.format(fecha)
+
+  const [tokenConfirmar, setTokenConfirmar] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null)
+
+  // El token de Identificación ya se consumió (y probablemente expiró: el
+  // paciente pasó por Tratamiento, Profesional y Horario de por medio) —
+  // este es un desafío nuevo, de un solo uso, específico de este envío.
+  useEffect(() => {
+    if (error) {
+      setTokenConfirmar(null)
+      turnstileRef.current?.reset()
+    }
+  }, [error])
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,11 +108,18 @@ export function PasoConfirmar({
         </p>
       )}
 
+      <TurnstileWidget
+        ref={turnstileRef}
+        onToken={setTokenConfirmar}
+        onExpirar={() => setTokenConfirmar(null)}
+        onError={() => setTokenConfirmar(null)}
+      />
+
       <Button
         type="button"
         size="lg"
-        disabled={enviando}
-        onClick={onConfirmar}
+        disabled={enviando || !tokenConfirmar}
+        onClick={() => tokenConfirmar && onConfirmar(tokenConfirmar)}
         className="w-full gap-2 rounded-full"
       >
         {enviando ? (

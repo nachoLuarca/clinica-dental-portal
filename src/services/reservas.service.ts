@@ -1,7 +1,7 @@
 import { apiFetch } from "@/lib/http-client"
 import type {
   Cita,
-  DatosCrearCita,
+  DatosCrearCitaPublica,
   DisponibilidadTratamiento,
   Profesional,
   TratamientoPublico,
@@ -67,14 +67,17 @@ export async function consultarDisponibilidad(
 }
 
 /**
- * Crea la cita del paciente autenticado. No se envía `X-Clinica`: el tenant
- * sale del token, igual que el resto de las rutas `auth:paciente`.
+ * Crea la cita identificando al paciente por RUT + Turnstile (sin sesión).
+ * Reemplaza el flujo antiguo de `/paciente/appointments`, que requería
+ * login por password.
  */
-export async function crearCita(datos: DatosCrearCita): Promise<Cita> {
-  const respuesta = await apiFetch<{ data: Cita }>("/paciente/appointments", {
+export async function crearCitaPublica(
+  datos: DatosCrearCitaPublica
+): Promise<Cita> {
+  const respuesta = await apiFetch<{ data: Cita }>("/publico/citas", {
     method: "POST",
     body: datos,
-    autenticado: true,
+    incluirClinica: true,
   })
   return respuesta.data
 }
