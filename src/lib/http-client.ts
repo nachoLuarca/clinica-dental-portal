@@ -1,7 +1,10 @@
 import { env } from "@/lib/env"
 import { obtenerToken } from "@/lib/session"
 
-const TIMEOUT_MS_POR_DEFECTO = 10_000
+// El backend local en Windows/WSL2 mide 2-8s de variabilidad por I/O del
+// bind mount incluso contra 127.0.0.1 (diagnosticado por el equipo de
+// backend, no es un problema de red real): 10s se quedaba corto seguido.
+const TIMEOUT_MS_POR_DEFECTO = 20_000
 
 /**
  * Error de la capa HTTP. Distingue entre:
