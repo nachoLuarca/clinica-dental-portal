@@ -3,7 +3,7 @@ import { ArrowLeft, CalendarCheck, CheckCircle2, Clock3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { iconoDeCategoria } from "@/components/servicios/CategoriaIcono"
+import { iconoDeEspecialidad } from "@/components/servicios/EspecialidadIcono"
 import { formatClp, formatDuracion } from "@/lib/format"
 import { useServicio } from "@/hooks/useServicios"
 import { useAuth } from "@/hooks/useAuth"
@@ -36,7 +36,7 @@ export function ServicioDetallePage() {
     )
   }
 
-  const Icono = iconoDeCategoria(servicio.categoria)
+  const Icono = iconoDeEspecialidad(servicio.especialidad?.nombre ?? null)
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
@@ -54,9 +54,11 @@ export function ServicioDetallePage() {
             <Icono className="size-6" />
           </span>
           <div>
-            <Badge variant="secondary" className="rounded-full">
-              {servicio.categoria}
-            </Badge>
+            {servicio.especialidad && (
+              <Badge variant="secondary" className="rounded-full">
+                {servicio.especialidad.nombre}
+              </Badge>
+            )}
             <h1 className="mt-2 font-heading text-3xl font-medium text-balance sm:text-4xl">
               {servicio.nombre}
             </h1>

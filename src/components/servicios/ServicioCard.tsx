@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
 import { ArrowUpRight } from "lucide-react"
 import { formatClp, formatDuracion } from "@/lib/format"
-import { iconoDeCategoria } from "@/components/servicios/CategoriaIcono"
+import { iconoDeEspecialidad } from "@/components/servicios/EspecialidadIcono"
 import type { TratamientoPublico } from "@/types/reserva"
 
 interface ServicioCardProps {
@@ -10,12 +10,12 @@ interface ServicioCardProps {
 
 /**
  * Fila de índice editorial: nombre grande a la izquierda, metadatos
- * (categoría, duración, precio) alineados a la derecha en mono, separados
+ * (especialidad, duración, precio) alineados a la derecha en mono, separados
  * por un filete fino. Reemplaza la grilla de tarjetas ícono+título+texto
  * repetida que se sentía a CRUD con estilos encima.
  */
 export function ServicioCard({ servicio }: ServicioCardProps) {
-  const Icono = iconoDeCategoria(servicio.categoria)
+  const Icono = iconoDeEspecialidad(servicio.especialidad?.nombre ?? null)
 
   return (
     <Link
@@ -27,9 +27,11 @@ export function ServicioCard({ servicio }: ServicioCardProps) {
           <Icono className="size-4" />
         </span>
         <div className="flex flex-col gap-1">
-          <span className="font-mono text-[0.7rem] tracking-wide text-muted-foreground uppercase">
-            {servicio.categoria}
-          </span>
+          {servicio.especialidad && (
+            <span className="font-mono text-[0.7rem] tracking-wide text-muted-foreground uppercase">
+              {servicio.especialidad.nombre}
+            </span>
+          )}
           <h3 className="font-heading text-xl leading-snug font-medium text-balance transition-colors duration-200 group-hover:text-primary sm:text-2xl">
             {servicio.nombre}
           </h3>
