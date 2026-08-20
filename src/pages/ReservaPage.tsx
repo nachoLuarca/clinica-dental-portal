@@ -1,5 +1,6 @@
 import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { PasoConfirmar } from "@/components/reserva/PasoConfirmar"
 import { PasoExito } from "@/components/reserva/PasoExito"
 import { PasoHorario } from "@/components/reserva/PasoHorario"
@@ -87,19 +88,41 @@ export function ReservaPage() {
           />
         )}
 
-        {wizard.paso === "confirmar" &&
-          wizard.tratamiento &&
-          wizard.slotSeleccionado && (
-            <PasoConfirmar
-              tratamiento={wizard.tratamiento}
-              slot={wizard.slotSeleccionado}
-              notas={wizard.notas}
-              onCambiarNotas={wizard.setNotas}
-              enviando={wizard.creandoCita}
-              error={wizard.errorCita}
-              onConfirmar={() => void wizard.confirmarReserva()}
-            />
-          )}
+        {wizard.paso === "confirmar" && wizard.tratamiento && (
+          <>
+            {wizard.slotSeleccionado ? (
+              <PasoConfirmar
+                tratamiento={wizard.tratamiento}
+                slot={wizard.slotSeleccionado}
+                notas={wizard.notas}
+                onCambiarNotas={wizard.setNotas}
+                enviando={wizard.creandoCita}
+                error={wizard.errorCita}
+                onConfirmar={() => void wizard.confirmarReserva()}
+              />
+            ) : wizard.cargandoSlots || wizard.cargandoProfesionales ? (
+              <div className="flex flex-col gap-3">
+                <Skeleton className="h-24 w-full rounded-2xl" />
+                <Skeleton className="h-40 w-full rounded-2xl" />
+              </div>
+            ) : (
+              <div className="flex flex-col items-start gap-3 rounded-2xl bg-destructive/10 p-5">
+                <p className="text-sm text-destructive">
+                  No pudimos recuperar el horario que habías elegido. Elige
+                  uno nuevo.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => wizard.volverAPaso("horario")}
+                >
+                  Elegir horario
+                </Button>
+              </div>
+            )}
+          </>
+        )}
 
         {wizard.paso === "exito" && wizard.citaCreada && (
           <PasoExito cita={wizard.citaCreada} onReservarOtra={wizard.reiniciar} />
