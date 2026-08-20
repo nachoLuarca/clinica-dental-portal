@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
-import { useAuth } from "@/hooks/useAuth"
+import { useCallback, useEffect, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { ApiError } from "@/lib/http-client"
+import { normalizarRutParaApi } from "@/lib/rut"
+import { crearPaciente, verificarRut } from "@/services/pacientes.service"
 import {
   consultarDisponibilidad,
-  crearCita,
+  crearCitaPublica,
   listarProfesionales,
   listarTratamientosPublicos,
 } from "@/services/reservas.service"
+import type { DatosAltaPaciente } from "@/types/identificacion"
 import type {
   Cita,
   Profesional,
@@ -16,6 +18,7 @@ import type {
 } from "@/types/reserva"
 
 export type PasoReserva =
+  | "identificacion"
   | "servicio"
   | "profesional"
   | "horario"
@@ -23,70 +26,39 @@ export type PasoReserva =
   | "exito"
 
 export const PASOS_RESERVA: { id: PasoReserva; titulo: string }[] = [
+  { id: "identificacion", titulo: "Identificación" },
   { id: "servicio", titulo: "Tratamiento" },
   { id: "profesional", titulo: "Profesional" },
   { id: "horario", titulo: "Horario" },
   { id: "confirmar", titulo: "Confirmar" },
 ]
 
-const CLAVE_ESTADO = "clinica_reserva_en_curso"
-
-interface EstadoGuardado {
-  tratamientoId: number
-  profesionalId: number | null
-  cualquieraDisponible: boolean
-  fecha: string
-  horaIso: string | null
-  notas: string
-}
-
-function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function guardarEstado(estado: EstadoGuardado) {
-  try {
-    sessionStorage.setItem(CLAVE_ESTADO, JSON.stringify(estado))
-  } catch {
-    // Sin sessionStorage disponible (privado/cuotas): el flujo sigue
-    // funcionando, solo no sobrevive a una redirección de login.
-  }
-}
-
-function leerEstadoGuardado(): EstadoGuardado | null {
-  try {
-    const crudo = sessionStorage.getItem(CLAVE_ESTADO)
-    return crudo ? (JSON.parse(crudo) as EstadoGuardado) : null
-  } catch {
-    return null
-  }
-}
-
-function limpiarEstadoGuardado() {
-  try {
-    sessionStorage.removeItem(CLAVE_ESTADO)
-  } catch {
-    // Ver nota en guardarEstado.
-  }
-}
-
 /**
- * Orquesta los pasos del flujo de reserva. La disponibilidad y la
- * creación de la cita siempre se piden a la API — este hook no calcula
- * horarios ni valida choques, solo maneja estado de UI (paso actual,
- * selección en curso, errores para mostrar).
+ * Orquesta los pasos del flujo de reserva. La disponibilidad y la creación
+ * de la cita siempre se piden a la API — este hook no calcula horarios ni
+ * valida choques, solo maneja estado de UI (paso actual, selección en
+ * curso, errores para mostrar).
  *
- * El progreso se persiste en `sessionStorage` para sobrevivir al ida-y-
- * vuelta por `/ingresar` cuando el paciente todavía no tiene sesión al
- * momento de confirmar (paso 4 del flujo, ver handoff).
+ * El paciente se identifica por RUT + Turnstile (paso "identificacion"),
+ * sin login ni password: no hay sesión que sobrevivir a una redirección, así
+ * que a diferencia de versiones anteriores este hook no persiste nada en
+ * `sessionStorage` — todo el estado vive mientras la pestaña sigue abierta.
  */
 export function useReservaWizard() {
-  const { autenticado } = useAuth()
-  const navigate = useNavigate()
   const [parametros] = useSearchParams()
-  const yaHidrato = useRef(false)
 
-  const [paso, setPaso] = useState<PasoReserva>("servicio")
+  const [paso, setPaso] = useState<PasoReserva>("identificacion")
+
+  const [rut, setRut] = useState<string | null>(null)
+  const [verificandoRut, setVerificandoRut] = useState(false)
+  const [errorVerificarRut, setErrorVerificarRut] = useState<string | null>(
+    null
+  )
+  const [pacienteExiste, setPacienteExiste] = useState<boolean | null>(null)
+  const [creandoPaciente, setCreandoPaciente] = useState(false)
+  const [errorAltaPaciente, setErrorAltaPaciente] = useState<ApiError | null>(
+    null
+  )
 
   const [tratamientos, setTratamientos] = useState<TratamientoPublico[] | null>(
     null
@@ -107,7 +79,9 @@ export function useReservaWizard() {
   const [profesional, setProfesionalState] = useState<Profesional | null>(null)
   const [cualquieraDisponible, setCualquieraDisponible] = useState(false)
 
-  const [fecha, setFechaState] = useState(hoyISO())
+  const [fecha, setFechaState] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  )
   const [slots, setSlots] = useState<SlotConProfesional[]>([])
   const [cargandoSlots, setCargandoSlots] = useState(false)
   const [errorSlots, setErrorSlots] = useState<string | null>(null)
@@ -121,8 +95,8 @@ export function useReservaWizard() {
   const [slotYaNoDisponible, setSlotYaNoDisponible] = useState(false)
 
   // Catálogo real de tratamientos (misma fuente que usa el catálogo
-  // público). Si viene `?servicio=` (slug o id) desde la ficha de
-  // detalle, precarga ese tratamiento como cortesía.
+  // público), se pide en paralelo a la identificación para que ya esté
+  // listo cuando el paciente avance.
   useEffect(() => {
     let vigente = true
     listarTratamientosPublicos()
@@ -130,32 +104,6 @@ export function useReservaWizard() {
         if (!vigente) return
         setTratamientos(lista)
         setCargandoTratamientos(false)
-
-        const guardado = leerEstadoGuardado()
-        const slugPedido = parametros.get("servicio")
-
-        if (guardado) {
-          const encontrado = lista.find((t) => t.id === guardado.tratamientoId)
-          if (encontrado) {
-            setTratamientoState(encontrado)
-            setCualquieraDisponible(guardado.cualquieraDisponible)
-            setFechaState(guardado.fecha)
-            setNotas(guardado.notas)
-            setPaso(guardado.horaIso ? "confirmar" : "profesional")
-          }
-        } else if (slugPedido) {
-          const encontrado = lista.find(
-            (t) => t.slug === slugPedido || String(t.id) === slugPedido
-          )
-          if (encontrado) {
-            // Viene desde la ficha de detalle con el tratamiento ya
-            // elegido: saltar directo a "profesional" en vez de
-            // mostrar de nuevo el listado completo del paso 1.
-            setTratamientoState(encontrado)
-            setPaso("profesional")
-            void cargarProfesionales({ treatmentId: encontrado.id, forzar: true })
-          }
-        }
       })
       .catch(() => {
         if (vigente) {
@@ -168,55 +116,7 @@ export function useReservaWizard() {
     return () => {
       vigente = false
     }
-    // Solo al montar: la hidratación desde sessionStorage/URL es un
-    // gesto único, no algo que deba repetirse en cada cambio de estado.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // Rehidrata profesional + slot elegido una vez que ya tenemos tratamiento
-  // y (si aplica) la lista de profesionales, para volver exactamente donde
-  // el paciente quedó antes de que lo mandáramos a /ingresar.
-  useEffect(() => {
-    if (yaHidrato.current || !tratamiento) return
-    const guardado = leerEstadoGuardado()
-    if (!guardado || guardado.tratamientoId !== tratamiento.id) return
-
-    if (guardado.cualquieraDisponible) {
-      yaHidrato.current = true
-      setCualquieraDisponible(true)
-      void cargarProfesionales().then((listaProfesionales) => {
-        void buscarDisponibilidad(
-          guardado.fecha,
-          null,
-          true,
-          listaProfesionales ?? []
-        ).then((lista) => {
-          if (guardado.horaIso) {
-            const slot = lista.find((s) => s.fecha_hora === guardado.horaIso)
-            if (slot) setSlotSeleccionado(slot)
-          }
-        })
-      })
-    } else if (guardado.profesionalId) {
-      yaHidrato.current = true
-      void cargarProfesionales().then((lista) => {
-        const encontrado =
-          lista?.find((p) => p.id === guardado.profesionalId) ?? null
-        setProfesionalState(encontrado)
-        void buscarDisponibilidad(guardado.fecha, encontrado, false).then(
-          (slotsCargados) => {
-            if (guardado.horaIso) {
-              const slot = slotsCargados.find(
-                (s) => s.fecha_hora === guardado.horaIso
-              )
-              if (slot) setSlotSeleccionado(slot)
-            }
-          }
-        )
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tratamiento])
 
   const cargarProfesionales = useCallback(
     async (opciones?: { treatmentId?: number; forzar?: boolean }) => {
@@ -313,6 +213,70 @@ export function useReservaWizard() {
     [tratamiento, profesionales]
   )
 
+  // Tras identificarse, si vino `?servicio=` desde la ficha de detalle salta
+  // directo a "profesional" con ese tratamiento precargado; si no, pasa por
+  // "servicio" con el listado completo.
+  function avanzarTrasIdentificacion() {
+    const slugPedido = parametros.get("servicio")
+    const encontrado =
+      slugPedido &&
+      tratamientos?.find(
+        (t) => t.slug === slugPedido || String(t.id) === slugPedido
+      )
+
+    if (encontrado) {
+      setTratamientoState(encontrado)
+      setPaso("profesional")
+      void cargarProfesionales({ treatmentId: encontrado.id, forzar: true })
+      return
+    }
+    setPaso("servicio")
+  }
+
+  async function verificarRutYAvanzar(
+    rutIngresado: string,
+    turnstileToken: string
+  ) {
+    const rutNormalizado = normalizarRutParaApi(rutIngresado)
+    setRut(rutNormalizado)
+    setVerificandoRut(true)
+    setErrorVerificarRut(null)
+    try {
+      const existe = await verificarRut(rutNormalizado, turnstileToken)
+      setPacienteExiste(existe)
+      if (existe) avanzarTrasIdentificacion()
+    } catch (error) {
+      setPacienteExiste(null)
+      setErrorVerificarRut(
+        error instanceof ApiError
+          ? error.message
+          : "No pudimos verificar tu RUT. Intenta de nuevo."
+      )
+    } finally {
+      setVerificandoRut(false)
+    }
+  }
+
+  async function crearPacienteYAvanzar(
+    datos: Omit<DatosAltaPaciente, "rut">
+  ) {
+    if (!rut) return
+    setCreandoPaciente(true)
+    setErrorAltaPaciente(null)
+    try {
+      await crearPaciente({ rut, ...datos })
+      avanzarTrasIdentificacion()
+    } catch (error) {
+      setErrorAltaPaciente(
+        error instanceof ApiError
+          ? error
+          : new ApiError("No pudimos crear tu ficha. Intenta de nuevo.", 0)
+      )
+    } finally {
+      setCreandoPaciente(false)
+    }
+  }
+
   function elegirTratamiento(seleccionado: TratamientoPublico) {
     const cambioDeTratamiento = tratamiento?.id !== seleccionado.id
     setTratamientoState(seleccionado)
@@ -366,45 +330,19 @@ export function useReservaWizard() {
     setSlotSeleccionado(slot)
     setSlotYaNoDisponible(false)
     setErrorCita(null)
-
-    if (!autenticado) {
-      guardarEstado({
-        tratamientoId: tratamiento!.id,
-        profesionalId: profesional?.id ?? null,
-        cualquieraDisponible,
-        fecha,
-        horaIso: slot.fecha_hora,
-        notas,
-      })
-      const destino = "/reservar"
-      navigate(`/ingresar?next=${encodeURIComponent(destino)}`)
-      return
-    }
-
     setPaso("confirmar")
   }
 
-  async function confirmarReserva() {
-    if (!tratamiento || !slotSeleccionado) return
-
-    if (!autenticado) {
-      guardarEstado({
-        tratamientoId: tratamiento.id,
-        profesionalId: profesional?.id ?? null,
-        cualquieraDisponible,
-        fecha,
-        horaIso: slotSeleccionado.fecha_hora,
-        notas,
-      })
-      navigate(`/ingresar?next=${encodeURIComponent("/reservar")}`)
-      return
-    }
+  async function confirmarReserva(turnstileToken: string) {
+    if (!tratamiento || !slotSeleccionado || !rut) return
 
     setCreandoCita(true)
     setErrorCita(null)
     setSlotYaNoDisponible(false)
     try {
-      const cita = await crearCita({
+      const cita = await crearCitaPublica({
+        rut,
+        turnstile_token: turnstileToken,
         professional_id: slotSeleccionado.profesional.id,
         treatment_id: tratamiento.id,
         fecha_hora: slotSeleccionado.fecha_hora,
@@ -412,7 +350,6 @@ export function useReservaWizard() {
       })
       setCitaCreada(cita)
       setPaso("exito")
-      limpiarEstadoGuardado()
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         // El slot ya no está libre: refresca la disponibilidad y ofrece
@@ -432,8 +369,11 @@ export function useReservaWizard() {
   }
 
   function reiniciar() {
-    limpiarEstadoGuardado()
-    setPaso("servicio")
+    setPaso("identificacion")
+    setRut(null)
+    setPacienteExiste(null)
+    setErrorVerificarRut(null)
+    setErrorAltaPaciente(null)
     setTratamientoState(null)
     setProfesionalState(null)
     setCualquieraDisponible(false)
@@ -448,6 +388,14 @@ export function useReservaWizard() {
   return {
     paso,
     setPaso,
+    rut,
+    verificandoRut,
+    errorVerificarRut,
+    pacienteExiste,
+    verificarRutYAvanzar,
+    creandoPaciente,
+    errorAltaPaciente,
+    crearPacienteYAvanzar,
     tratamientos,
     cargandoTratamientos,
     errorTratamientos,

@@ -64,13 +64,17 @@ export interface SlotConProfesional extends SlotDisponible {
   profesional: Profesional
 }
 
-export interface DatosCrearCita {
-  /**
-   * Opcional: si se omite, la API auto-asigna el primer profesional activo
-   * con ese horario libre. Este wizard igual lo manda siempre, porque ya
-   * sabe exactamente qué profesional cubre el slot elegido (mostrado en el
-   * paso de horario) y no quiere arriesgarse a que la API asigne a otro.
-   */
+/**
+ * `POST /publico/citas`: crea la cita identificando al paciente por RUT +
+ * Turnstile en vez de sesión. `professional_id` opcional: si se omite, la
+ * API auto-asigna. Este wizard igual lo manda siempre, porque ya sabe
+ * exactamente qué profesional cubre el slot elegido (mostrado en el paso
+ * de horario) y no quiere arriesgarse a que la API asigne a otro.
+ */
+export interface DatosCrearCitaPublica {
+  rut: string
+  /** Token de Turnstile resuelto en el paso Confirmar (distinto del de Identificación: son de un solo uso). */
+  turnstile_token: string
   professional_id?: number
   treatment_id: number
   fecha_hora: string
