@@ -8,7 +8,9 @@
  * este es el único lugar que debería cambiar.
  */
 export const env = {
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api",
+  // "localhost" es intermitente en Windows/WSL2 con este backend (ver
+  // http-client.ts): "127.0.0.1" evita esa resolución y responde estable.
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8081/api",
   clinicaSlug: import.meta.env.VITE_CLINICA_SLUG || "clinica-demo",
   /**
    * Site key pública de Cloudflare Turnstile (segura de exponer en el
