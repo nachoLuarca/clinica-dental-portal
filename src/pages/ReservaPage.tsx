@@ -75,13 +75,10 @@ export function ReservaPage() {
 
         {wizard.paso === "servicio" && (
           <PasoServicio
-            tratamientos={wizard.tratamientos}
-            cargando={wizard.cargandoTratamientos}
-            error={wizard.errorTratamientos}
-            conteoProfesionalesPorEspecialidad={
-              wizard.conteoProfesionalesPorEspecialidad
-            }
-            cargandoConteoProfesionales={wizard.cargandoConteoProfesionales}
+            especialidades={wizard.especialidades}
+            cargando={wizard.cargandoEspecialidades}
+            error={wizard.errorEspecialidades}
+            otrosTratamientos={wizard.otrosTratamientos}
             onElegir={wizard.elegirTratamiento}
           />
         )}

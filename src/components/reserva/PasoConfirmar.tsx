@@ -7,10 +7,10 @@ import {
   type TurnstileWidgetHandle,
 } from "@/components/identificacion/TurnstileWidget"
 import { formatClp, formatDuracion } from "@/lib/format"
-import type { SlotConProfesional, TratamientoPublico } from "@/types/reserva"
+import type { SlotConProfesional, TratamientoDeEspecialidad } from "@/types/reserva"
 
 interface PasoConfirmarProps {
-  tratamiento: TratamientoPublico
+  tratamiento: TratamientoDeEspecialidad
   slot: SlotConProfesional
   notas: string
   onCambiarNotas: (valor: string) => void

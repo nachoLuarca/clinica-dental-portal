@@ -28,6 +28,38 @@ export interface TratamientoPublico {
   slug: string
 }
 
+/**
+ * Subconjunto de `TratamientoPublico` que necesita el wizard de reserva
+ * para llevar la selección de un paso a otro (elegir, mostrar en
+ * Confirmar, mandar `treatment_id`). Es la forma exacta en la que vienen
+ * los tratamientos anidados en `GET /publico/especialidades`, y
+ * `TratamientoPublico` la satisface igual (tiene esos campos y más), así
+ * que un tratamiento de cualquiera de las dos fuentes sirve acá sin
+ * conversión.
+ */
+export interface TratamientoDeEspecialidad {
+  id: number
+  nombre: string
+  descripcion: string | null
+  precio: string
+  duracion_minutos: number
+  slug: string
+  activo: boolean
+}
+
+/**
+ * `GET /publico/especialidades`: especialidad con sus tratamientos activos
+ * y la cantidad de profesionales que la cubren, ya resuelto en el backend
+ * (reemplaza agrupar tratamientos por especialidad y contar profesionales
+ * a mano en el cliente).
+ */
+export interface EspecialidadPublica {
+  id: number
+  nombre: string
+  profesionales_count: number
+  tratamientos: TratamientoDeEspecialidad[]
+}
+
 /** Profesional tal como aparece anidado en una cita ya creada. */
 export interface Profesional {
   id: number

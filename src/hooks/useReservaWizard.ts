@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { ApiError } from "@/lib/http-client"
 import { normalizarRutParaApi } from "@/lib/rut"
@@ -6,14 +6,17 @@ import { crearPaciente, verificarRut } from "@/services/pacientes.service"
 import {
   consultarDisponibilidad,
   crearCitaPublica,
+  listarEspecialidadesPublicas,
   listarProfesionales,
   listarTratamientosPublicos,
 } from "@/services/reservas.service"
 import type { DatosAltaPaciente } from "@/types/identificacion"
 import type {
   Cita,
+  EspecialidadPublica,
   Profesional,
   SlotConProfesional,
+  TratamientoDeEspecialidad,
   TratamientoPublico,
 } from "@/types/reserva"
 
@@ -63,13 +66,8 @@ export function useReservaWizard() {
   const [tratamientos, setTratamientos] = useState<TratamientoPublico[] | null>(
     null
   )
-  const [cargandoTratamientos, setCargandoTratamientos] = useState(true)
-  const [errorTratamientos, setErrorTratamientos] = useState<string | null>(
-    null
-  )
-  const [tratamiento, setTratamientoState] = useState<TratamientoPublico | null>(
-    null
-  )
+  const [tratamiento, setTratamientoState] =
+    useState<TratamientoDeEspecialidad | null>(null)
 
   const [profesionales, setProfesionales] = useState<Profesional[] | null>(null)
   const [cargandoProfesionales, setCargandoProfesionales] = useState(false)
@@ -88,10 +86,13 @@ export function useReservaWizard() {
   const [slotSeleccionado, setSlotSeleccionado] =
     useState<SlotConProfesional | null>(null)
 
-  const [conteoProfesionalesPorEspecialidad, setConteoProfesionalesPorEspecialidad] =
-    useState<Record<string, number> | null>(null)
-  const [cargandoConteoProfesionales, setCargandoConteoProfesionales] =
-    useState(false)
+  const [especialidades, setEspecialidades] = useState<
+    EspecialidadPublica[] | null
+  >(null)
+  const [cargandoEspecialidades, setCargandoEspecialidades] = useState(false)
+  const [errorEspecialidades, setErrorEspecialidades] = useState<
+    string | null
+  >(null)
 
   const [notas, setNotas] = useState("")
   const [creandoCita, setCreandoCita] = useState(false)
@@ -99,24 +100,21 @@ export function useReservaWizard() {
   const [citaCreada, setCitaCreada] = useState<Cita | null>(null)
   const [slotYaNoDisponible, setSlotYaNoDisponible] = useState(false)
 
-  // Catálogo real de tratamientos (misma fuente que usa el catálogo
-  // público), se pide en paralelo a la identificación para que ya esté
-  // listo cuando el paciente avance.
+  // Catálogo real de tratamientos, se pide en paralelo a la identificación
+  // para que ya esté listo cuando el paciente avance. Solo sirve acá para
+  // resolver el atajo `?servicio=` y los tratamientos sin especialidad
+  // (`otrosTratamientos` más abajo) — el paso "servicio" ya no lo usa
+  // directo, tiene su propio estado de carga/error vía `especialidades`. Si
+  // esta llamada falla, ambos usos degradan solos (sin match / sin otros).
   useEffect(() => {
     let vigente = true
     listarTratamientosPublicos()
       .then((lista) => {
-        if (!vigente) return
-        setTratamientos(lista)
-        setCargandoTratamientos(false)
+        if (vigente) setTratamientos(lista)
       })
       .catch(() => {
-        if (vigente) {
-          setCargandoTratamientos(false)
-          setErrorTratamientos(
-            "No pudimos cargar los tratamientos disponibles para reservar. Intenta de nuevo más tarde."
-          )
-        }
+        // Ver nota arriba: sin lista, el atajo ?servicio= y "otros
+        // tratamientos" simplemente no aportan nada, sin romper el resto.
       })
     return () => {
       vigente = false
@@ -153,45 +151,35 @@ export function useReservaWizard() {
     [profesionales, tratamiento]
   )
 
-  // El paso "servicio" ahora agrupa por especialidad (no por tratamiento
-  // suelto), y cada grupo muestra cuántos profesionales la cubren. Se pide
-  // solo al llegar efectivamente a ese paso (no en el atajo `?servicio=`
-  // que lo salta) y una sola vez por sesión del wizard: un profesional
-  // elegible para un tratamiento de la especialidad lo es para todos
-  // (misma FK especialidad_id), así que un tratamiento representante por
-  // grupo alcanza para contar sin pedir uno por cada tratamiento.
+  // El paso "servicio" agrupa por especialidad, con la cantidad de
+  // profesionales que cubre cada una ya resuelta por el backend
+  // (`GET /publico/especialidades`, una sola query). Se pide solo al llegar
+  // efectivamente a ese paso — no en el atajo `?servicio=` que lo salta — y
+  // una sola vez por sesión del wizard.
   useEffect(() => {
-    if (paso !== "servicio" || !tratamientos) return
-    if (conteoProfesionalesPorEspecialidad || cargandoConteoProfesionales) return
-
-    const representantePorGrupo = new Map<string, number>()
-    for (const t of tratamientos) {
-      const clave = t.especialidad ? String(t.especialidad.id) : "sin-especialidad"
-      if (!representantePorGrupo.has(clave)) {
-        representantePorGrupo.set(clave, t.id)
-      }
-    }
-    if (representantePorGrupo.size === 0) return
+    if (paso !== "servicio" || especialidades || cargandoEspecialidades) return
 
     let vigente = true
-    setCargandoConteoProfesionales(true)
-    Promise.all(
-      [...representantePorGrupo.entries()].map(async ([clave, treatmentId]) => {
-        const lista = await listarProfesionales(treatmentId).catch(() => [])
-        return [clave, lista.length] as const
+    setCargandoEspecialidades(true)
+    setErrorEspecialidades(null)
+    listarEspecialidadesPublicas()
+      .then((lista) => {
+        if (vigente) setEspecialidades(lista)
       })
-    )
-      .then((resultados) => {
-        if (!vigente) return
-        setConteoProfesionalesPorEspecialidad(Object.fromEntries(resultados))
+      .catch(() => {
+        if (vigente) {
+          setErrorEspecialidades(
+            "No pudimos cargar las especialidades disponibles. Intenta de nuevo más tarde."
+          )
+        }
       })
       .finally(() => {
-        if (vigente) setCargandoConteoProfesionales(false)
+        if (vigente) setCargandoEspecialidades(false)
       })
     return () => {
       vigente = false
     }
-  }, [paso, tratamientos, conteoProfesionalesPorEspecialidad, cargandoConteoProfesionales])
+  }, [paso, especialidades, cargandoEspecialidades])
 
   /**
    * En modo "cualquiera disponible" se hace UNA sola consulta sin
@@ -258,6 +246,14 @@ export function useReservaWizard() {
     [tratamiento, profesionales]
   )
 
+  // `GET /publico/especialidades` no incluye tratamientos sin especialidad
+  // asignada (el backend los deja fuera a propósito): siguen viniendo por
+  // `GET /publico/tratamientos`, para no perderlos del paso "servicio".
+  const otrosTratamientos = useMemo(
+    () => tratamientos?.filter((t) => t.activo && !t.especialidad) ?? [],
+    [tratamientos]
+  )
+
   // Tras identificarse, si vino `?servicio=` desde la ficha de detalle salta
   // directo a "profesional" con ese tratamiento precargado; si no, pasa por
   // "servicio" con el listado completo.
@@ -322,7 +318,7 @@ export function useReservaWizard() {
     }
   }
 
-  function elegirTratamiento(seleccionado: TratamientoPublico) {
+  function elegirTratamiento(seleccionado: TratamientoDeEspecialidad) {
     const cambioDeTratamiento = tratamiento?.id !== seleccionado.id
     setTratamientoState(seleccionado)
     setProfesionalState(null)
@@ -441,13 +437,12 @@ export function useReservaWizard() {
     creandoPaciente,
     errorAltaPaciente,
     crearPacienteYAvanzar,
-    tratamientos,
-    cargandoTratamientos,
-    errorTratamientos,
     tratamiento,
     elegirTratamiento,
-    conteoProfesionalesPorEspecialidad,
-    cargandoConteoProfesionales,
+    especialidades,
+    cargandoEspecialidades,
+    errorEspecialidades,
+    otrosTratamientos,
     profesionales,
     cargandoProfesionales,
     errorProfesionales,

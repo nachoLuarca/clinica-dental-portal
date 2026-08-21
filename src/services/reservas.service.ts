@@ -3,6 +3,7 @@ import type {
   Cita,
   DatosCrearCitaPublica,
   DisponibilidadTratamiento,
+  EspecialidadPublica,
   Profesional,
   TratamientoPublico,
 } from "@/types/reserva"
@@ -16,6 +17,22 @@ import type {
 export async function listarTratamientosPublicos(): Promise<TratamientoPublico[]> {
   const respuesta = await apiFetch<{ data: TratamientoPublico[] }>(
     "/publico/tratamientos?per_page=100",
+    { incluirClinica: true }
+  )
+  return respuesta.data
+}
+
+/**
+ * Especialidades con sus tratamientos activos y cantidad de profesionales
+ * que las cubren, ya agrupado y contado por el backend en una sola query.
+ * Reemplaza el patrón anterior de agrupar tratamientos por especialidad y
+ * pedir profesionales por cada una para contar cuántos hay.
+ */
+export async function listarEspecialidadesPublicas(): Promise<
+  EspecialidadPublica[]
+> {
+  const respuesta = await apiFetch<{ data: EspecialidadPublica[] }>(
+    "/publico/especialidades",
     { incluirClinica: true }
   )
   return respuesta.data
