@@ -103,5 +103,9 @@ export const TurnstileWidget = forwardRef<
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contenedorId])
 
-  return <div id={contenedorId} />
+  return (
+    <div className="flex justify-center">
+      <div id={contenedorId} />
+    </div>
+  )
 })
