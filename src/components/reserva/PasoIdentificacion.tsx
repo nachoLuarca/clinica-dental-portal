@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import { ArrowRight, ShieldCheck, UserPlus } from "lucide-react"
+import { PhoneInput } from "react-international-phone"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -87,7 +88,7 @@ export function PasoIdentificacion({
     if (email.trim() && !esEmailValido(email)) {
       errores.email = "Ingresa un correo válido."
     }
-    if (telefono.trim().length < 8) {
+    if (telefono.replace(/\D/g, "").length < 8) {
       errores.telefono = "Ingresa un teléfono válido."
     }
     if (!esFechaNacimientoValida(fechaNacimiento)) {
@@ -195,19 +196,26 @@ export function PasoIdentificacion({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="alta-telefono">Teléfono</Label>
-          <Input
-            id="alta-telefono"
-            type="tel"
-            autoComplete="tel"
-            placeholder="+56 9 1234 5678"
+          <Label htmlFor="alta-telefono">Teléfono móvil</Label>
+          <PhoneInput
+            defaultCountry="cl"
             value={telefono}
-            onChange={(e) => setTelefono(e.target.value)}
-            aria-invalid={Boolean(
-              erroresAlta.telefono ||
-                primerErrorDeCampo(errorAltaPaciente, "telefono")
-            )}
-            className="h-11 rounded-xl px-4"
+            onChange={setTelefono}
+            className="telefono-input"
+            inputClassName="!w-full !flex-1 focus-visible:!border-ring focus-visible:!outline-none focus-visible:!ring-3 focus-visible:!ring-ring/50"
+            countrySelectorStyleProps={{
+              buttonClassName: "focus-visible:!ring-3 focus-visible:!ring-ring/50",
+            }}
+            inputProps={{
+              id: "alta-telefono",
+              name: "telefono",
+              required: true,
+              autoComplete: "tel",
+              "aria-invalid": Boolean(
+                erroresAlta.telefono ||
+                  primerErrorDeCampo(errorAltaPaciente, "telefono")
+              ),
+            }}
           />
           {(erroresAlta.telefono ||
             primerErrorDeCampo(errorAltaPaciente, "telefono")) && (

@@ -6,6 +6,7 @@
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource/ibm-plex-mono/600.css";
+@import "react-international-phone/style.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -147,6 +148,53 @@
     --sidebar-accent-foreground: #f4d9cf;
     --sidebar-border: color-mix(in oklch, #f2ede4 12%, transparent);
     --sidebar-ring: #6cbdaf;
+}
+
+/*
+ * Reskin de react-international-phone (selector de país + teléfono del alta
+ * de paciente): la librería se customiza entera vía sus propias variables
+ * CSS, así que acá solo se mapean a los tokens del proyecto — nada de pelear
+ * contra su hoja de estilos con !important.
+ */
+.telefono-input {
+  --react-international-phone-height: 2.75rem;
+  --react-international-phone-border-radius: var(--radius-xl);
+  --react-international-phone-border-color: var(--border);
+  --react-international-phone-background-color: transparent;
+  --react-international-phone-text-color: var(--foreground);
+  --react-international-phone-font-size: 0.875rem;
+  --react-international-phone-country-selector-border-color: var(--border);
+  --react-international-phone-country-selector-background-color: transparent;
+  --react-international-phone-country-selector-background-color-hover: var(--muted);
+  --react-international-phone-country-selector-arrow-color: var(--muted-foreground);
+  --react-international-phone-disabled-country-selector-arrow-color: var(--muted-foreground);
+  --react-international-phone-flag-width: 22px;
+  --react-international-phone-flag-height: 16px;
+  --react-international-phone-dropdown-item-background-color: var(--card);
+  --react-international-phone-dropdown-item-text-color: var(--foreground);
+  --react-international-phone-dropdown-item-dial-code-color: var(--muted-foreground);
+  --react-international-phone-dropdown-item-font-size: 0.875rem;
+  --react-international-phone-dropdown-item-height: 36px;
+  --react-international-phone-selected-dropdown-item-background-color: color-mix(
+    in oklch,
+    var(--accent) 16%,
+    var(--card)
+  );
+  --react-international-phone-selected-dropdown-item-text-color: var(--foreground);
+  --react-international-phone-selected-dropdown-item-dial-code-color: var(--accent);
+  --react-international-phone-dropdown-shadow: 0 12px 32px -8px color-mix(in oklch, var(--primary) 30%, transparent);
+  --react-international-phone-disabled-background-color: var(--muted);
+  --react-international-phone-disabled-text-color: var(--muted-foreground);
+}
+
+.telefono-input,
+.telefono-input .react-international-phone-input {
+  font-family: var(--font-sans);
+}
+
+.telefono-input .react-international-phone-country-selector-dropdown {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
 }
 
 @layer base {
