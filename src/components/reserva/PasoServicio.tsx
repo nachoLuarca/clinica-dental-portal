@@ -9,50 +9,28 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { iconoDeEspecialidad } from "@/components/servicios/EspecialidadIcono"
 import { formatClp, formatDuracion } from "@/lib/format"
-import type { TratamientoPublico } from "@/types/reserva"
+import type { EspecialidadPublica, TratamientoDeEspecialidad } from "@/types/reserva"
 
 interface PasoServicioProps {
-  tratamientos: TratamientoPublico[] | null
+  especialidades: EspecialidadPublica[] | null
   cargando: boolean
   error: string | null
-  conteoProfesionalesPorEspecialidad: Record<string, number> | null
-  cargandoConteoProfesionales: boolean
-  onElegir: (tratamiento: TratamientoPublico) => void
+  /** Tratamientos activos sin especialidad asignada: no vienen en `especialidades`. */
+  otrosTratamientos: TratamientoDeEspecialidad[]
+  onElegir: (tratamiento: TratamientoDeEspecialidad) => void
 }
 
-interface GrupoEspecialidad {
+interface GrupoParaMostrar {
   clave: string
   nombre: string
-  tratamientos: TratamientoPublico[]
+  /** `null` cuando no se sabe (grupo "Otros tratamientos", sin especialidad real que contar). */
+  profesionalesCount: number | null
+  tratamientos: TratamientoDeEspecialidad[]
 }
 
-const SIN_ESPECIALIDAD = "sin-especialidad"
+const CLAVE_OTROS = "otros"
 
-function agruparPorEspecialidad(
-  tratamientos: TratamientoPublico[]
-): GrupoEspecialidad[] {
-  const grupos = new Map<string, GrupoEspecialidad>()
-
-  for (const t of tratamientos) {
-    const clave = t.especialidad ? String(t.especialidad.id) : SIN_ESPECIALIDAD
-    const nombre = t.especialidad?.nombre ?? "Otros tratamientos"
-    if (!grupos.has(clave)) {
-      grupos.set(clave, { clave, nombre, tratamientos: [] })
-    }
-    grupos.get(clave)!.tratamientos.push(t)
-  }
-
-  // "Otros tratamientos" (sin especialidad asignada) siempre al final: no
-  // es una especialidad real, es el resto.
-  return [...grupos.values()].sort((a, b) => {
-    if (a.clave === SIN_ESPECIALIDAD) return 1
-    if (b.clave === SIN_ESPECIALIDAD) return -1
-    return a.nombre.localeCompare(b.nombre, "es")
-  })
-}
-
-function textoProfesionales(cantidad: number | undefined): string {
-  if (cantidad === undefined) return ""
+function textoProfesionales(cantidad: number): string {
   if (cantidad === 0) return "Sin profesionales asignados"
   return cantidad === 1 ? "1 profesional" : `${cantidad} profesionales`
 }
@@ -61,21 +39,35 @@ function textoProfesionales(cantidad: number | undefined): string {
  * El paso "Tratamiento" del wizard agrupa por especialidad (no lista los
  * tratamientos sueltos): cada especialidad muestra cuántos profesionales la
  * cubren y, al expandirla, el detalle de sus tratamientos para elegir uno
- * puntual. No aplica cuando se llega con `?servicio=` desde la ficha de un
+ * puntual. Los datos ya vienen agrupados y contados por el backend
+ * (`GET /publico/especialidades`) — acá no se arma nada, solo se muestra.
+ * No aplica cuando se llega con `?servicio=` desde la ficha de un
  * tratamiento específico del catálogo — ese atajo salta este paso entero.
  */
 export function PasoServicio({
-  tratamientos,
+  especialidades,
   cargando,
   error,
-  conteoProfesionalesPorEspecialidad,
-  cargandoConteoProfesionales,
+  otrosTratamientos,
   onElegir,
 }: PasoServicioProps) {
-  const grupos = useMemo(() => {
-    if (!tratamientos) return []
-    return agruparPorEspecialidad(tratamientos.filter((t) => t.activo))
-  }, [tratamientos])
+  const grupos = useMemo<GrupoParaMostrar[]>(() => {
+    const base: GrupoParaMostrar[] = (especialidades ?? []).map((e) => ({
+      clave: String(e.id),
+      nombre: e.nombre,
+      profesionalesCount: e.profesionales_count,
+      tratamientos: e.tratamientos,
+    }))
+    if (otrosTratamientos.length > 0) {
+      base.push({
+        clave: CLAVE_OTROS,
+        nombre: "Otros tratamientos",
+        profesionalesCount: null,
+        tratamientos: otrosTratamientos,
+      })
+    }
+    return base
+  }, [especialidades, otrosTratamientos])
 
   if (cargando) {
     return (
@@ -118,9 +110,8 @@ export function PasoServicio({
     >
       {grupos.map((grupo) => {
         const Icono = iconoDeEspecialidad(
-          grupo.clave === SIN_ESPECIALIDAD ? null : grupo.nombre
+          grupo.clave === CLAVE_OTROS ? null : grupo.nombre
         )
-        const conteo = conteoProfesionalesPorEspecialidad?.[grupo.clave]
 
         return (
           <AccordionItem key={grupo.clave} value={grupo.clave}>
@@ -137,9 +128,8 @@ export function PasoServicio({
                     {grupo.tratamientos.length === 1
                       ? "1 tratamiento"
                       : `${grupo.tratamientos.length} tratamientos`}
-                    {cargandoConteoProfesionales
-                      ? " · verificando profesionales..."
-                      : conteo !== undefined && ` · ${textoProfesionales(conteo)}`}
+                    {grupo.profesionalesCount !== null &&
+                      ` · ${textoProfesionales(grupo.profesionalesCount)}`}
                   </span>
                 </span>
               </span>
