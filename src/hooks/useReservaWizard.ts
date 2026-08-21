@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { ApiError } from "@/lib/http-client"
 import { normalizarRutParaApi } from "@/lib/rut"
@@ -106,19 +106,24 @@ export function useReservaWizard() {
   // (`otrosTratamientos` más abajo) — el paso "servicio" ya no lo usa
   // directo, tiene su propio estado de carga/error vía `especialidades`. Si
   // esta llamada falla, ambos usos degradan solos (sin match / sin otros).
+  //
+  // Guarda con un `ref` (no un flag de closure con cleanup) a propósito:
+  // en StrictMode (dev) React monta, desmonta y vuelve a montar los
+  // efectos para detectar código no idempotente. Un flag de closure que el
+  // cleanup pone en `false` invalida el resultado del primer pedido real
+  // sin que nadie más lo reemplace. El `ref` sobrevive ese ciclo porque es
+  // la misma instancia del componente, así que no hay pedido duplicado ni
+  // resultado descartado.
+  const tratamientosSolicitados = useRef(false)
   useEffect(() => {
-    let vigente = true
+    if (tratamientosSolicitados.current) return
+    tratamientosSolicitados.current = true
     listarTratamientosPublicos()
-      .then((lista) => {
-        if (vigente) setTratamientos(lista)
-      })
+      .then((lista) => setTratamientos(lista))
       .catch(() => {
         // Ver nota arriba: sin lista, el atajo ?servicio= y "otros
         // tratamientos" simplemente no aportan nada, sin romper el resto.
       })
-    return () => {
-      vigente = false
-    }
   }, [])
 
   const cargarProfesionales = useCallback(
@@ -155,31 +160,30 @@ export function useReservaWizard() {
   // profesionales que cubre cada una ya resuelta por el backend
   // (`GET /publico/especialidades`, una sola query). Se pide solo al llegar
   // efectivamente a ese paso — no en el atajo `?servicio=` que lo salta — y
-  // una sola vez por sesión del wizard.
+  // una sola vez por sesión del wizard (mismo motivo del `ref` que en el
+  // efecto de tratamientos: un flag de closure con cleanup se rompe bajo
+  // StrictMode).
+  const especialidadesSolicitadas = useRef(false)
   useEffect(() => {
-    if (paso !== "servicio" || especialidades || cargandoEspecialidades) return
+    if (paso !== "servicio" || especialidadesSolicitadas.current) return
+    especialidadesSolicitadas.current = true
 
-    let vigente = true
     setCargandoEspecialidades(true)
     setErrorEspecialidades(null)
     listarEspecialidadesPublicas()
-      .then((lista) => {
-        if (vigente) setEspecialidades(lista)
-      })
+      .then((lista) => setEspecialidades(lista))
       .catch(() => {
-        if (vigente) {
-          setErrorEspecialidades(
-            "No pudimos cargar las especialidades disponibles. Intenta de nuevo más tarde."
-          )
-        }
+        // A diferencia del efecto de tratamientos (silencioso, sin reintento
+        // posible), acá sí hay que poder reintentar: si el paciente vuelve a
+        // este paso más tarde, que vuelva a pedirlo en vez de quedar
+        // trabado con el error de la primera vez.
+        especialidadesSolicitadas.current = false
+        setErrorEspecialidades(
+          "No pudimos cargar las especialidades disponibles. Intenta de nuevo más tarde."
+        )
       })
-      .finally(() => {
-        if (vigente) setCargandoEspecialidades(false)
-      })
-    return () => {
-      vigente = false
-    }
-  }, [paso, especialidades, cargandoEspecialidades])
+      .finally(() => setCargandoEspecialidades(false))
+  }, [paso])
 
   /**
    * En modo "cualquiera disponible" se hace UNA sola consulta sin
