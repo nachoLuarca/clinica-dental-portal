@@ -78,6 +78,10 @@ export function ReservaPage() {
             tratamientos={wizard.tratamientos}
             cargando={wizard.cargandoTratamientos}
             error={wizard.errorTratamientos}
+            conteoProfesionalesPorEspecialidad={
+              wizard.conteoProfesionalesPorEspecialidad
+            }
+            cargandoConteoProfesionales={wizard.cargandoConteoProfesionales}
             onElegir={wizard.elegirTratamiento}
           />
         )}

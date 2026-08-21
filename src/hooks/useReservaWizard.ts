@@ -88,6 +88,11 @@ export function useReservaWizard() {
   const [slotSeleccionado, setSlotSeleccionado] =
     useState<SlotConProfesional | null>(null)
 
+  const [conteoProfesionalesPorEspecialidad, setConteoProfesionalesPorEspecialidad] =
+    useState<Record<string, number> | null>(null)
+  const [cargandoConteoProfesionales, setCargandoConteoProfesionales] =
+    useState(false)
+
   const [notas, setNotas] = useState("")
   const [creandoCita, setCreandoCita] = useState(false)
   const [errorCita, setErrorCita] = useState<string | null>(null)
@@ -147,6 +152,46 @@ export function useReservaWizard() {
     },
     [profesionales, tratamiento]
   )
+
+  // El paso "servicio" ahora agrupa por especialidad (no por tratamiento
+  // suelto), y cada grupo muestra cuántos profesionales la cubren. Se pide
+  // solo al llegar efectivamente a ese paso (no en el atajo `?servicio=`
+  // que lo salta) y una sola vez por sesión del wizard: un profesional
+  // elegible para un tratamiento de la especialidad lo es para todos
+  // (misma FK especialidad_id), así que un tratamiento representante por
+  // grupo alcanza para contar sin pedir uno por cada tratamiento.
+  useEffect(() => {
+    if (paso !== "servicio" || !tratamientos) return
+    if (conteoProfesionalesPorEspecialidad || cargandoConteoProfesionales) return
+
+    const representantePorGrupo = new Map<string, number>()
+    for (const t of tratamientos) {
+      const clave = t.especialidad ? String(t.especialidad.id) : "sin-especialidad"
+      if (!representantePorGrupo.has(clave)) {
+        representantePorGrupo.set(clave, t.id)
+      }
+    }
+    if (representantePorGrupo.size === 0) return
+
+    let vigente = true
+    setCargandoConteoProfesionales(true)
+    Promise.all(
+      [...representantePorGrupo.entries()].map(async ([clave, treatmentId]) => {
+        const lista = await listarProfesionales(treatmentId).catch(() => [])
+        return [clave, lista.length] as const
+      })
+    )
+      .then((resultados) => {
+        if (!vigente) return
+        setConteoProfesionalesPorEspecialidad(Object.fromEntries(resultados))
+      })
+      .finally(() => {
+        if (vigente) setCargandoConteoProfesionales(false)
+      })
+    return () => {
+      vigente = false
+    }
+  }, [paso, tratamientos, conteoProfesionalesPorEspecialidad, cargandoConteoProfesionales])
 
   /**
    * En modo "cualquiera disponible" se hace UNA sola consulta sin
@@ -401,6 +446,8 @@ export function useReservaWizard() {
     errorTratamientos,
     tratamiento,
     elegirTratamiento,
+    conteoProfesionalesPorEspecialidad,
+    cargandoConteoProfesionales,
     profesionales,
     cargandoProfesionales,
     errorProfesionales,
