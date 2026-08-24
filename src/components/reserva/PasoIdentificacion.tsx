@@ -115,7 +115,11 @@ export function PasoIdentificacion({
 
   if (pacienteExiste === false) {
     return (
-      <form className="flex flex-col gap-5" onSubmit={manejarAlta} noValidate>
+      <form
+        className="mx-auto flex max-w-xl flex-col gap-5"
+        onSubmit={manejarAlta}
+        noValidate
+      >
         <p className="text-sm text-muted-foreground">
           No encontramos una ficha con el RUT{" "}
           <span className="font-mono font-medium text-foreground">{rut}</span>.
@@ -282,7 +286,11 @@ export function PasoIdentificacion({
   }
 
   return (
-    <form className="flex flex-col gap-5" onSubmit={manejarVerificar} noValidate>
+    <form
+      className="mx-auto flex max-w-md flex-col gap-5"
+      onSubmit={manejarVerificar}
+      noValidate
+    >
       <p className="text-sm text-muted-foreground">
         Ingresa tu RUT para identificarte. No necesitas contraseña ni crear
         una cuenta.
