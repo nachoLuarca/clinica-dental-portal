@@ -8,6 +8,7 @@ import { PasoProfesional } from "@/components/reserva/PasoProfesional"
 import { PasoServicio } from "@/components/reserva/PasoServicio"
 import { StepperReserva } from "@/components/reserva/StepperReserva"
 import { useReservaWizard } from "@/hooks/useReservaWizard"
+import { cn } from "@/lib/utils"
 
 const TITULOS: Record<string, string> = {
   identificacion: "Identifícate con tu RUT",
@@ -52,7 +53,12 @@ export function ReservaPage() {
         )}
 
         {titulo && (
-          <h1 className="mb-6 font-heading text-2xl font-medium text-balance sm:text-3xl">
+          <h1
+            className={cn(
+              "mb-6 font-heading text-2xl font-medium text-balance sm:text-3xl",
+              wizard.paso === "identificacion" && "mx-auto max-w-md text-center"
+            )}
+          >
             {titulo}
           </h1>
         )}
