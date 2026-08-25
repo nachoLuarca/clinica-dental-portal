@@ -48,6 +48,24 @@ export function Footer() {
             Tratamientos
           </Link>
           <Link
+            to="/equipo"
+            className="text-[#f6f2ed]/70 transition-colors hover:text-[#f6f2ed]"
+          >
+            Equipo profesional
+          </Link>
+          <Link
+            to="/convenios"
+            className="text-[#f6f2ed]/70 transition-colors hover:text-[#f6f2ed]"
+          >
+            Convenios
+          </Link>
+          <Link
+            to="/sucursales"
+            className="text-[#f6f2ed]/70 transition-colors hover:text-[#f6f2ed]"
+          >
+            Sucursales
+          </Link>
+          <Link
             to="/mis-horas"
             className="text-[#f6f2ed]/70 transition-colors hover:text-[#f6f2ed]"
           >

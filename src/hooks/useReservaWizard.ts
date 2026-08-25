@@ -350,6 +350,31 @@ export function useReservaWizard() {
     await buscarDisponibilidad(fecha, seleccionado, false)
   }
 
+  // Atajo `?profesional=<id>` (desde la ficha del equipo): el paciente ya
+  // eligió con quién quiere atenderse, pero igual tiene que elegir qué
+  // tratamiento necesita primero (la lista de profesionales depende de
+  // eso). En cuanto la lista de profesionales para ese tratamiento carga,
+  // si el profesional pedido está en ella, se salta el paso "profesional"
+  // solo — si no cubre ese tratamiento, no pasa nada: se ve la lista real.
+  // `.current` solo se marca `true` al aplicarlo, para no interceptar un
+  // "Volver" manual del paciente a este paso más tarde.
+  const profesionalPreseleccionadoAplicado = useRef(false)
+  useEffect(() => {
+    if (paso !== "profesional" || !profesionales) return
+    if (profesionalPreseleccionadoAplicado.current) return
+    const idPedido = parametros.get("profesional")
+    if (!idPedido) return
+    const encontrado = profesionales.find((p) => String(p.id) === idPedido)
+    if (!encontrado) return
+    profesionalPreseleccionadoAplicado.current = true
+    void elegirProfesionalEspecifico(encontrado)
+    // `parametros` (de useSearchParams) y `elegirProfesionalEspecifico` son
+    // estables en la práctica para lo que le importa a este efecto (el id
+    // pedido en la URL no cambia dentro de una misma sesión del wizard); el
+    // guard por `ref` ya evita cualquier reejecución indebida.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paso, profesionales])
+
   async function elegirCualquieraDisponible() {
     setProfesionalState(null)
     setCualquieraDisponible(true)

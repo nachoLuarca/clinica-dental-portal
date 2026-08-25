@@ -60,12 +60,23 @@ export interface EspecialidadPublica {
   tratamientos: TratamientoDeEspecialidad[]
 }
 
-/** Profesional tal como aparece anidado en una cita ya creada. */
+/**
+ * Profesional tal como lo expone `GET /publico/profesionales`. Mismo tipo
+ * para el wizard de reserva (que solo necesita id/nombre/apellido/especialidad)
+ * y para el directorio público del equipo (que además usa foto_url, bio,
+ * matricula y especialidades) — un solo contrato para un solo endpoint, sin
+ * un tipo paralelo más liviano que se desalinee con el real.
+ */
 export interface Profesional {
   id: number
   nombre: string
   apellido: string | null
   especialidad: string | null
+  /** Presente en el directorio público del equipo; `undefined` donde no se pide (ej. anidado en una cita). */
+  foto_url?: string | null
+  bio?: string | null
+  matricula?: string | null
+  especialidades?: { id: number; nombre: string }[]
 }
 
 export interface SlotDisponible {
