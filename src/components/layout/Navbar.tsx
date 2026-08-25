@@ -11,6 +11,9 @@ const NOMBRE_CLINICA_POR_DEFECTO = "Clínica Sonrisa"
 const enlaces = [
   { href: "/", label: "Inicio" },
   { href: "/tratamientos", label: "Tratamientos" },
+  { href: "/equipo", label: "Equipo" },
+  { href: "/convenios", label: "Convenios" },
+  { href: "/sucursales", label: "Sucursales" },
   { href: "/mis-horas", label: "Mis horas" },
 ]
 

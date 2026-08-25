@@ -4,6 +4,9 @@ import { RutaProtegida } from "@/components/auth/RutaProtegida"
 import { LandingPage } from "@/pages/LandingPage"
 import { CatalogoPage } from "@/pages/CatalogoPage"
 import { ServicioDetallePage } from "@/pages/ServicioDetallePage"
+import { ConveniosPage } from "@/pages/ConveniosPage"
+import { SucursalesPage } from "@/pages/SucursalesPage"
+import { EquipoPage } from "@/pages/EquipoPage"
 import { IngresarPage } from "@/pages/IngresarPage"
 import { RegistroPage } from "@/pages/RegistroPage"
 import { CuentaPage } from "@/pages/CuentaPage"
@@ -18,6 +21,9 @@ function App() {
         <Route index element={<LandingPage />} />
         <Route path="tratamientos" element={<CatalogoPage />} />
         <Route path="tratamientos/:slug" element={<ServicioDetallePage />} />
+        <Route path="convenios" element={<ConveniosPage />} />
+        <Route path="sucursales" element={<SucursalesPage />} />
+        <Route path="equipo" element={<EquipoPage />} />
         <Route path="reservar" element={<ReservaPage />} />
         <Route path="mis-horas" element={<MisHorasPage />} />
         <Route path="ingresar" element={<IngresarPage />} />
