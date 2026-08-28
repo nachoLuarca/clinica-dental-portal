@@ -1,22 +1,25 @@
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { PASOS_RESERVA, type PasoReserva } from "@/hooks/useReservaWizard"
+import type { PasoReserva } from "@/hooks/useReservaWizard"
 
 interface StepperReservaProps {
+  pasos: { id: PasoReserva; titulo: string }[]
   pasoActual: PasoReserva
 }
 
 /**
  * Indicador visual del avance del flujo de reserva. Deliberadamente no es
  * un `<Tabs>` genérico: la reserva es un proceso guiado y secuencial, no
- * un conjunto de secciones intercambiables.
+ * un conjunto de secciones intercambiables. `pasos` varía según la puerta
+ * de entrada elegida (Especialidad/Profesional/Sucursal) — ver
+ * `PASOS_POR_ENTRADA` en `useReservaWizard`.
  */
-export function StepperReserva({ pasoActual }: StepperReservaProps) {
-  const indiceActual = PASOS_RESERVA.findIndex((p) => p.id === pasoActual)
+export function StepperReserva({ pasos, pasoActual }: StepperReservaProps) {
+  const indiceActual = pasos.findIndex((p) => p.id === pasoActual)
 
   return (
     <ol className="flex items-center gap-1.5 sm:gap-2">
-      {PASOS_RESERVA.map((paso, indice) => {
+      {pasos.map((paso, indice) => {
         const completado = indice < indiceActual
         const activo = indice === indiceActual
 
@@ -43,7 +46,7 @@ export function StepperReserva({ pasoActual }: StepperReservaProps) {
                 {paso.titulo}
               </span>
             </div>
-            {indice < PASOS_RESERVA.length - 1 && (
+            {indice < pasos.length - 1 && (
               <div
                 className={cn(
                   "mb-4 h-0.5 flex-1 rounded-full bg-muted transition-colors duration-500 sm:mb-5",
