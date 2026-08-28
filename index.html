@@ -19,10 +19,20 @@
       (sin path) de `VITE_API_BASE_URL` — ver el comentario de ese plugin
       sobre por qué no alcanza con la sintaxis `%VITE_API_BASE_URL%` nativa
       de Vite acá.
+
+      `style-src` lleva `'unsafe-inline'`: Radix UI (Tabs) y Framer Motion
+      aplican estilos inline en runtime via JS para animaciones/estado (no
+      hay forma de precalcular un hash o nonce estático para eso en un
+      `<meta>` sin servidor). Se verificó con la app real (build de
+      producción + backend real) que sin esto el filtro Mañana/Tarde del
+      paso Disponibilidad queda roto: Chrome bloquea el estilo y no rinde
+      nada. El riesgo que releva `unsafe-inline` en `style-src` es mucho
+      menor que en `script-src` (que se mantiene estricto, sin
+      `unsafe-inline` ni `unsafe-eval`) — inyectar CSS no ejecuta JS.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'self'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' __API_ORIGIN__; base-uri 'self'; form-action 'self'; object-src 'none'"
+      content="default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' __API_ORIGIN__; base-uri 'self'; form-action 'self'; object-src 'none'"
     />
   </head>
   <body>
