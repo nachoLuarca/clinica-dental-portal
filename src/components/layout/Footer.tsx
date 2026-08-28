@@ -1,15 +1,16 @@
-import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Clock, Mail, MapPin, Phone, Smile } from "lucide-react"
+import { useImagenValida } from "@/hooks/useImagenValida"
 import { useTenantBranding } from "@/hooks/useTenantBranding"
 
 const NOMBRE_CLINICA_POR_DEFECTO = "Clínica Sonrisa"
 
 export function Footer() {
-  const [logoRoto, setLogoRoto] = useState(false)
   const { marca } = useTenantBranding()
+  const { mostrar: mostrarLogo, onError: onErrorLogo } = useImagenValida(
+    marca?.logo_url
+  )
   const nombreClinica = marca?.nombre ?? NOMBRE_CLINICA_POR_DEFECTO
-  const mostrarLogo = Boolean(marca?.logo_url) && !logoRoto
 
   return (
     <footer className="border-t border-border/70 bg-[#082722] text-[#f6f2ed]">
@@ -21,7 +22,7 @@ export function Footer() {
                 src={marca?.logo_url ?? undefined}
                 alt={nombreClinica}
                 className="size-9 rounded-full object-cover"
-                onError={() => setLogoRoto(true)}
+                onError={onErrorLogo}
               />
             ) : (
               <span className="flex size-9 items-center justify-center rounded-full bg-[#f6f2ed] text-[#082722]">

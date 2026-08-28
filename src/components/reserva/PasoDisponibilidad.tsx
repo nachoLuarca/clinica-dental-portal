@@ -5,6 +5,7 @@ import { ChipHorario } from "@/components/reserva/ChipHorario"
 import { SelectorSemana } from "@/components/reserva/SelectorSemana"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useImagenValida } from "@/hooks/useImagenValida"
 import { horaDe } from "@/lib/fechas"
 import type { Profesional, SlotConProfesional } from "@/types/reserva"
 
@@ -40,6 +41,9 @@ function FilaProfesionalConChips({
   slotSeleccionado: SlotConProfesional | null
   onSeleccionarSlot: (slot: SlotConProfesional) => void
 }) {
+  const { mostrar: mostrarFoto, onError } = useImagenValida(
+    profesional.foto_url
+  )
   const nombreCompleto = [profesional.nombre, profesional.apellido]
     .filter(Boolean)
     .join(" ")
@@ -51,11 +55,12 @@ function FilaProfesionalConChips({
     <div className="flex flex-col gap-3 py-5">
       <div className="flex items-center gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-primary ring-1 ring-border/70">
-          {profesional.foto_url ? (
+          {mostrarFoto ? (
             <img
-              src={profesional.foto_url}
+              src={profesional.foto_url ?? undefined}
               alt={nombreCompleto}
               className="size-full object-cover"
+              onError={onError}
             />
           ) : (
             <UserRound className="size-4" />
