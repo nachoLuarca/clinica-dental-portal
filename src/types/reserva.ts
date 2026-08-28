@@ -77,6 +77,9 @@ export interface Profesional {
   bio?: string | null
   matricula?: string | null
   especialidades?: { id: number; nombre: string }[]
+  /** `null` cuando el profesional no tiene sede asignada. */
+  sucursal_id?: number | null
+  sucursal?: { id: number; nombre: string } | null
 }
 
 export interface SlotDisponible {
@@ -93,12 +96,21 @@ export interface SlotDisponible {
   professional_id?: number
 }
 
-/** `professional_id` es `null` cuando la consulta se hizo sin especificarlo. */
+/**
+ * `professional_id`/`treatment_id`/`especialidad_id` vienen `null` cuando la
+ * consulta no los especificó — exactamente uno de `treatment_id` o
+ * `especialidad_id` viene resuelto según cuál se haya mandado (son
+ * mutuamente excluyentes en `GET /publico/availability`).
+ * `duracion_minutos` es `null` en el caso borde de una especialidad sin
+ * ningún tratamiento activo (sin duración de referencia posible): la API
+ * responde igual con `slots: []`, no un error.
+ */
 export interface DisponibilidadTratamiento {
   professional_id: number | null
-  treatment_id: number
+  treatment_id: number | null
+  especialidad_id: number | null
   fecha: string
-  duracion_minutos: number
+  duracion_minutos: number | null
   slots: SlotDisponible[]
 }
 

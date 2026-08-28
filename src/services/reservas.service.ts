@@ -42,39 +42,59 @@ export async function listarEspecialidadesPublicas(): Promise<
  * Listado público de profesionales de la clínica, sin login. Si se pasa
  * `treatmentId`, la API devuelve solo los profesionales cuya especialidad
  * cubre la categoría de ese tratamiento (mismo shape que sin filtro).
+ * `sucursalId` acota además a los profesionales de esa sede — ambos filtros
+ * son combinables.
  */
 export async function listarProfesionales(
-  treatmentId?: number
+  treatmentId?: number,
+  sucursalId?: number
 ): Promise<Profesional[]> {
-  const query =
-    treatmentId != null ? `?treatment_id=${treatmentId}` : ""
+  const query = new URLSearchParams()
+  if (treatmentId != null) query.set("treatment_id", String(treatmentId))
+  if (sucursalId != null) query.set("sucursal_id", String(sucursalId))
+  const queryString = query.toString()
   const respuesta = await apiFetch<{ data: Profesional[] }>(
-    `/publico/profesionales${query}`,
+    `/publico/profesionales${queryString ? `?${queryString}` : ""}`,
     { incluirClinica: true }
   )
   return respuesta.data
 }
 
-interface ParametrosDisponibilidad {
-  /**
-   * Si se omite (o es `null`), la API agrega los slots libres de todos los
-   * profesionales activos del tenant (modo "cualquiera disponible"), cada
-   * uno marcado con su propio `professional_id` en `SlotDisponible`.
-   */
+/**
+ * Exactamente uno de `treatmentId`/`especialidadId` va, nunca ambos (mismo
+ * contrato que exige `AvailabilityRequest` en la API — 422 si mandás los
+ * dos o ninguno). Con `especialidadId`, la API usa la duración del
+ * tratamiento activo más largo de esa especialidad para generar los slots
+ * (cualquier tratamiento puntual que el paciente termine eligiendo en
+ * Confirmar entra en ese horario, sin riesgo de 409 por duración — solo por
+ * carrera real entre dos pacientes). `professionalId` explícito exige
+ * `treatmentId` del lado de la API (no combina con `especialidadId`): este
+ * wizard nunca manda ambos a la vez, ver `useReservaWizard.buscarDisponibilidad`.
+ */
+type ParametrosDisponibilidad = {
   professionalId?: number | null
-  treatmentId: number
   fecha: string
-}
+  /** Solo tiene efecto en modo "cualquiera disponible" (sin `professionalId`). */
+  sucursalId?: number | null
+} & ({ treatmentId: number; especialidadId?: undefined } | {
+  treatmentId?: undefined
+  especialidadId: number
+})
 
 export async function consultarDisponibilidad(
   params: ParametrosDisponibilidad
 ): Promise<DisponibilidadTratamiento> {
-  const query = new URLSearchParams({
-    treatment_id: String(params.treatmentId),
-    fecha: params.fecha,
-  })
+  const query = new URLSearchParams({ fecha: params.fecha })
+  if (params.treatmentId != null) {
+    query.set("treatment_id", String(params.treatmentId))
+  } else {
+    query.set("especialidad_id", String(params.especialidadId))
+  }
   if (params.professionalId != null) {
     query.set("professional_id", String(params.professionalId))
+  }
+  if (params.sucursalId != null) {
+    query.set("sucursal_id", String(params.sucursalId))
   }
   const respuesta = await apiFetch<{ data: DisponibilidadTratamiento }>(
     `/publico/availability?${query.toString()}`,

@@ -10,6 +10,7 @@ import {
   listarProfesionales,
   listarTratamientosPublicos,
 } from "@/services/reservas.service"
+import { listarSucursalesPublicas } from "@/services/sucursales.service"
 import type { DatosAltaPaciente } from "@/types/identificacion"
 import type {
   Cita,
@@ -19,22 +20,71 @@ import type {
   TratamientoDeEspecialidad,
   TratamientoPublico,
 } from "@/types/reserva"
+import type { Sucursal } from "@/types/sucursales"
+
+/**
+ * Tres puertas de entrada (estilo Dentalink) que convergen en la misma
+ * pantalla de disponibilidad:
+ * - "especialidad": lista de especialidades del catálogo.
+ * - "profesional": elegir con quién atenderse primero; si cubre más de una
+ *   especialidad, elige cuál buscar (si cubre solo una, se salta ese paso).
+ * - "sucursal": elegir sede primero; de ahí en más sigue el mismo camino que
+ *   "especialidad" pero con `sucursal_id` acotando profesionales/horarios.
+ *
+ * A propósito, ninguna de las tres pide un TRATAMIENTO puntual de entrada —
+ * la disponibilidad se consulta por especialidad (`GET /publico/availability
+ * ?especialidad_id=`, la API usa la duración del tratamiento más largo de
+ * esa especialidad para generar los slots) y el tratamiento exacto recién se
+ * elige después de reservar un horario, en el paso "tratamiento-especifico".
+ * Solo cuando el paciente llega desde la ficha de un tratamiento puntual del
+ * catálogo (`/tratamientos/:slug` → "Reservar este tratamiento", atajo
+ * `?servicio=`) el tratamiento ya viene fijo desde el arranque y ese paso se
+ * salta entero — por eso los tratamientos "sin especialidad asignada"
+ * (`otrosTratamientos` en versiones anteriores de este hook) solo son
+ * reservables desde ese atajo: no tienen especialidad con la que resolver
+ * disponibilidad en las otras tres puertas de entrada.
+ */
+export type EntradaReserva = "especialidad" | "profesional" | "sucursal"
 
 export type PasoReserva =
+  | "inicio"
+  | "sucursal-lista"
+  | "especialidad-lista"
+  | "profesional-lista"
+  | "disponibilidad"
+  | "tratamiento-especifico"
   | "identificacion"
-  | "servicio"
-  | "profesional"
-  | "horario"
   | "confirmar"
   | "exito"
 
-export const PASOS_RESERVA: { id: PasoReserva; titulo: string }[] = [
-  { id: "identificacion", titulo: "Identificación" },
-  { id: "servicio", titulo: "Tratamiento" },
-  { id: "profesional", titulo: "Profesional" },
-  { id: "horario", titulo: "Horario" },
-  { id: "confirmar", titulo: "Confirmar" },
-]
+const PASOS_POR_ENTRADA: Record<
+  EntradaReserva,
+  { id: PasoReserva; titulo: string }[]
+> = {
+  especialidad: [
+    { id: "especialidad-lista", titulo: "Especialidad" },
+    { id: "disponibilidad", titulo: "Disponibilidad" },
+    { id: "tratamiento-especifico", titulo: "Tratamiento" },
+    { id: "identificacion", titulo: "Identificación" },
+    { id: "confirmar", titulo: "Confirmar" },
+  ],
+  profesional: [
+    { id: "profesional-lista", titulo: "Profesional" },
+    { id: "especialidad-lista", titulo: "Especialidad" },
+    { id: "disponibilidad", titulo: "Disponibilidad" },
+    { id: "tratamiento-especifico", titulo: "Tratamiento" },
+    { id: "identificacion", titulo: "Identificación" },
+    { id: "confirmar", titulo: "Confirmar" },
+  ],
+  sucursal: [
+    { id: "sucursal-lista", titulo: "Sucursal" },
+    { id: "especialidad-lista", titulo: "Especialidad" },
+    { id: "disponibilidad", titulo: "Disponibilidad" },
+    { id: "tratamiento-especifico", titulo: "Tratamiento" },
+    { id: "identificacion", titulo: "Identificación" },
+    { id: "confirmar", titulo: "Confirmar" },
+  ],
+}
 
 /**
  * Orquesta los pasos del flujo de reserva. La disponibilidad y la creación
@@ -42,15 +92,18 @@ export const PASOS_RESERVA: { id: PasoReserva; titulo: string }[] = [
  * valida choques, solo maneja estado de UI (paso actual, selección en
  * curso, errores para mostrar).
  *
- * El paciente se identifica por RUT + Turnstile (paso "identificacion"),
- * sin login ni password: no hay sesión que sobrevivir a una redirección, así
- * que a diferencia de versiones anteriores este hook no persiste nada en
- * `sessionStorage` — todo el estado vive mientras la pestaña sigue abierta.
+ * El paciente se identifica por RUT + Turnstile en el paso "identificacion",
+ * ubicado justo antes de "confirmar" (no al principio): se puede explorar
+ * especialidad/profesional/horario sin dar datos personales todavía. Sin
+ * login ni password: no hay sesión que sobrevivir a una redirección, así
+ * que este hook no persiste nada en `sessionStorage` — todo el estado vive
+ * mientras la pestaña sigue abierta.
  */
 export function useReservaWizard() {
   const [parametros] = useSearchParams()
 
-  const [paso, setPaso] = useState<PasoReserva>("identificacion")
+  const [paso, setPaso] = useState<PasoReserva>("inicio")
+  const [entrada, setEntrada] = useState<EntradaReserva | null>(null)
 
   const [rut, setRut] = useState<string | null>(null)
   const [verificandoRut, setVerificandoRut] = useState(false)
@@ -66,6 +119,9 @@ export function useReservaWizard() {
   const [tratamientos, setTratamientos] = useState<TratamientoPublico[] | null>(
     null
   )
+  // Tratamiento puntual: solo llega resuelto de entrada por el atajo
+  // `?servicio=`; en las otras tres puertas de entrada queda `null` hasta el
+  // paso "tratamiento-especifico" (después de elegir horario).
   const [tratamiento, setTratamientoState] =
     useState<TratamientoDeEspecialidad | null>(null)
 
@@ -75,7 +131,22 @@ export function useReservaWizard() {
     null
   )
   const [profesional, setProfesionalState] = useState<Profesional | null>(null)
-  const [cualquieraDisponible, setCualquieraDisponible] = useState(false)
+
+  const [sucursales, setSucursales] = useState<Sucursal[] | null>(null)
+  const [cargandoSucursales, setCargandoSucursales] = useState(false)
+  const [errorSucursales, setErrorSucursales] = useState<string | null>(null)
+  const [sucursal, setSucursalState] = useState<Sucursal | null>(null)
+
+  const [especialidades, setEspecialidades] = useState<
+    EspecialidadPublica[] | null
+  >(null)
+  const [cargandoEspecialidades, setCargandoEspecialidades] = useState(false)
+  const [errorEspecialidades, setErrorEspecialidades] = useState<
+    string | null
+  >(null)
+  const [especialidadElegidaId, setEspecialidadElegidaId] = useState<
+    number | null
+  >(null)
 
   const [fecha, setFechaState] = useState(() =>
     new Date().toISOString().slice(0, 10)
@@ -86,26 +157,22 @@ export function useReservaWizard() {
   const [slotSeleccionado, setSlotSeleccionado] =
     useState<SlotConProfesional | null>(null)
 
-  const [especialidades, setEspecialidades] = useState<
-    EspecialidadPublica[] | null
-  >(null)
-  const [cargandoEspecialidades, setCargandoEspecialidades] = useState(false)
-  const [errorEspecialidades, setErrorEspecialidades] = useState<
-    string | null
-  >(null)
-
   const [notas, setNotas] = useState("")
   const [creandoCita, setCreandoCita] = useState(false)
   const [errorCita, setErrorCita] = useState<string | null>(null)
   const [citaCreada, setCitaCreada] = useState<Cita | null>(null)
   const [slotYaNoDisponible, setSlotYaNoDisponible] = useState(false)
 
-  // Catálogo real de tratamientos, se pide en paralelo a la identificación
-  // para que ya esté listo cuando el paciente avance. Solo sirve acá para
-  // resolver el atajo `?servicio=` y los tratamientos sin especialidad
-  // (`otrosTratamientos` más abajo) — el paso "servicio" ya no lo usa
-  // directo, tiene su propio estado de carga/error vía `especialidades`. Si
-  // esta llamada falla, ambos usos degradan solos (sin match / sin otros).
+  const pasosVisibles = useMemo(
+    () => (entrada ? PASOS_POR_ENTRADA[entrada] : []),
+    [entrada]
+  )
+
+  // Catálogo real de tratamientos, se pide apenas se monta el wizard: solo
+  // sirve para resolver el atajo `?servicio=` (los tratamientos sin
+  // especialidad asignada solo son reservables por ese atajo, ver nota en el
+  // comentario del hook). Si esta llamada falla, el atajo simplemente no
+  // encuentra match y el paciente sigue por el flujo normal desde "inicio".
   //
   // Guarda con un `ref` (no un flag de closure con cleanup) a propósito:
   // en StrictMode (dev) React monta, desmonta y vuelve a montar los
@@ -121,24 +188,53 @@ export function useReservaWizard() {
     listarTratamientosPublicos()
       .then((lista) => setTratamientos(lista))
       .catch(() => {
-        // Ver nota arriba: sin lista, el atajo ?servicio= y "otros
-        // tratamientos" simplemente no aportan nada, sin romper el resto.
+        // Ver nota arriba: sin lista, el atajo ?servicio= no encuentra
+        // match, sin romper el resto.
       })
   }, [])
 
+  // Especialidades con sus tratamientos activos, pedidas también apenas se
+  // monta el wizard (no solo al llegar al paso "especialidad-lista": las
+  // otras dos entradas también las necesitan — Sucursal las muestra igual
+  // después de elegir sede, y Profesional las usa para resolver qué
+  // tratamientos ofrecer en "tratamiento-especifico" una vez elegido el
+  // horario). Mismo motivo de `ref` que el efecto de tratamientos.
+  const especialidadesSolicitadas = useRef(false)
+  useEffect(() => {
+    if (especialidadesSolicitadas.current) return
+    especialidadesSolicitadas.current = true
+
+    setCargandoEspecialidades(true)
+    setErrorEspecialidades(null)
+    listarEspecialidadesPublicas()
+      .then((lista) => setEspecialidades(lista))
+      .catch(() => {
+        especialidadesSolicitadas.current = false
+        setErrorEspecialidades(
+          "No pudimos cargar las especialidades disponibles. Intenta de nuevo más tarde."
+        )
+      })
+      .finally(() => setCargandoEspecialidades(false))
+  }, [])
+
   const cargarProfesionales = useCallback(
-    async (opciones?: { treatmentId?: number; forzar?: boolean }) => {
+    async (opciones?: {
+      treatmentId?: number
+      sucursalId?: number
+      forzar?: boolean
+    }) => {
       // `forzar` evita el corto-circuito del cache cuando el llamador ya
-      // sabe que la lista quedó obsoleta (cambio de tratamiento) en el
-      // mismo tick en que pidió limpiarla con `setProfesionales(null)` —
-      // ese `null` todavía no se refleja en este closure, así que sin
-      // `forzar` acá se devolvería la lista vieja en vez de pedir la nueva.
+      // sabe que la lista quedó obsoleta (cambio de sede) en el mismo tick
+      // en que pidió limpiarla con `setProfesionales(null)` — ese `null`
+      // todavía no se refleja en este closure, así que sin `forzar` acá se
+      // devolvería la lista vieja en vez de pedir la nueva.
       if (profesionales !== null && !opciones?.forzar) return profesionales
       setCargandoProfesionales(true)
       setErrorProfesionales(null)
       try {
         const lista = await listarProfesionales(
-          opciones?.treatmentId ?? tratamiento?.id
+          opciones?.treatmentId,
+          opciones?.sucursalId ?? sucursal?.id
         )
         setProfesionales(lista)
         return lista
@@ -153,73 +249,76 @@ export function useReservaWizard() {
         setCargandoProfesionales(false)
       }
     },
-    [profesionales, tratamiento]
+    [profesionales, sucursal]
   )
 
-  // El paso "servicio" agrupa por especialidad, con la cantidad de
-  // profesionales que cubre cada una ya resuelta por el backend
-  // (`GET /publico/especialidades`, una sola query). Se pide solo al llegar
-  // efectivamente a ese paso — no en el atajo `?servicio=` que lo salta — y
-  // una sola vez por sesión del wizard (mismo motivo del `ref` que en el
-  // efecto de tratamientos: un flag de closure con cleanup se rompe bajo
-  // StrictMode).
-  const especialidadesSolicitadas = useRef(false)
+  const sucursalesSolicitadas = useRef(false)
   useEffect(() => {
-    if (paso !== "servicio" || especialidadesSolicitadas.current) return
-    especialidadesSolicitadas.current = true
+    if (paso !== "sucursal-lista" || sucursalesSolicitadas.current) return
+    sucursalesSolicitadas.current = true
 
-    setCargandoEspecialidades(true)
-    setErrorEspecialidades(null)
-    listarEspecialidadesPublicas()
-      .then((lista) => setEspecialidades(lista))
+    setCargandoSucursales(true)
+    setErrorSucursales(null)
+    listarSucursalesPublicas()
+      .then((lista) => setSucursales(lista))
       .catch(() => {
-        // A diferencia del efecto de tratamientos (silencioso, sin reintento
-        // posible), acá sí hay que poder reintentar: si el paciente vuelve a
-        // este paso más tarde, que vuelva a pedirlo en vez de quedar
-        // trabado con el error de la primera vez.
-        especialidadesSolicitadas.current = false
-        setErrorEspecialidades(
-          "No pudimos cargar las especialidades disponibles. Intenta de nuevo más tarde."
+        sucursalesSolicitadas.current = false
+        setErrorSucursales(
+          "No pudimos cargar las sucursales disponibles. Intenta de nuevo más tarde."
         )
       })
-      .finally(() => setCargandoEspecialidades(false))
+      .finally(() => setCargandoSucursales(false))
   }, [paso])
 
+  // Lista completa del equipo activo (sin filtrar por tratamiento) para el
+  // paso "profesional-lista" — mismo endpoint que usa el directorio público
+  // de `/equipo` (`useEquipoProfesional`).
+  const profesionalesListaSolicitada = useRef(false)
+  useEffect(() => {
+    if (paso !== "profesional-lista" || profesionalesListaSolicitada.current) {
+      return
+    }
+    profesionalesListaSolicitada.current = true
+    void cargarProfesionales({ forzar: true })
+  }, [paso, cargarProfesionales])
+
   /**
-   * En modo "cualquiera disponible" se hace UNA sola consulta sin
-   * `professional_id`: la API agrega internamente los slots libres de todo
-   * el equipo (ver `AvailabilityService::forTenant`) y marca cada slot con
-   * el profesional que lo cubre. Acá solo se resuelve ese id contra la
-   * lista de profesionales para poder mostrar el nombre.
+   * Siempre en modo "cualquiera disponible" (nunca se manda
+   * `professional_id`): la API agrega los slots libres del equipo — de toda
+   * la clínica, o solo de la sede si se manda `sucursal_id` — y marca cada
+   * slot con el profesional que lo cubre. Acá solo se resuelve ese id contra
+   * la lista de profesionales para poder mostrar nombre/foto. Filtrar a un
+   * solo profesional (entrada "Profesional") es responsabilidad de quien
+   * consume `slots`, no de esta consulta — mandar `professional_id` acá
+   * obligaría a mandar también `treatment_id` del lado de la API (ver
+   * `AvailabilityRequest`), y este wizard todavía no lo tiene resuelto en
+   * ese punto del flujo.
+   *
+   * Recibe `consulta` (con `treatmentId` o `especialidadId`, nunca los dos)
+   * como parámetro explícito, no leído de `tratamiento`/`especialidadElegidaId`
+   * del estado: los llamadores de esta función a veces la invocan en el
+   * mismo tick en que recién están haciendo el `setState` correspondiente, y
+   * ese `setState` es asíncrono — leerlo acá adentro devolvería todavía el
+   * valor previo.
    */
   const buscarDisponibilidad = useCallback(
     async (
       fechaConsulta: string,
-      profesionalEspecifico: Profesional | null,
-      modoCualquiera: boolean,
+      consulta: { treatmentId: number } | { especialidadId: number },
       listaProfesionalesParaNombres?: Profesional[]
     ): Promise<SlotConProfesional[]> => {
-      if (!tratamiento) return []
-      if (!modoCualquiera && !profesionalEspecifico) {
-        setSlots([])
-        return []
-      }
-
       setCargandoSlots(true)
       setErrorSlots(null)
       try {
         const disponibilidad = await consultarDisponibilidad({
-          professionalId: modoCualquiera ? null : profesionalEspecifico!.id,
-          treatmentId: tratamiento.id,
+          ...consulta,
           fecha: fechaConsulta,
+          sucursalId: sucursal?.id,
         })
 
         const listaNombres = listaProfesionalesParaNombres ?? profesionales ?? []
         const conProfesional = disponibilidad.slots
           .map((slot): SlotConProfesional => {
-            if (!modoCualquiera) {
-              return { ...slot, profesional: profesionalEspecifico! }
-            }
             const encontrado = listaNombres.find(
               (p) => p.id === slot.professional_id
             )
@@ -247,36 +346,195 @@ export function useReservaWizard() {
         setCargandoSlots(false)
       }
     },
-    [tratamiento, profesionales]
+    [profesionales, sucursal]
   )
 
-  // `GET /publico/especialidades` no incluye tratamientos sin especialidad
-  // asignada (el backend los deja fuera a propósito): siguen viniendo por
-  // `GET /publico/tratamientos`, para no perderlos del paso "servicio".
-  const otrosTratamientos = useMemo(
-    () => tratamientos?.filter((t) => t.activo && !t.especialidad) ?? [],
-    [tratamientos]
-  )
+  // Opciones del paso "especialidad-lista": el catálogo completo, salvo
+  // entrando por Profesional — ahí se acota a las especialidades que ese
+  // profesional cubre (cruzando `profesional.especialidades` contra el
+  // catálogo completo, para tener también `.tratamientos` resuelto — lo
+  // necesita el paso "tratamiento-especifico" más adelante). Si por algún
+  // motivo no hay match (dato faltante), se cae al catálogo completo para no
+  // dejar al paciente en un callejón sin salida.
+  const opcionesEspecialidad = useMemo(() => {
+    if (!especialidades) return null
+    if (entrada !== "profesional" || !profesional) return especialidades
+    const ids = new Set((profesional.especialidades ?? []).map((e) => e.id))
+    const filtradas = especialidades.filter((e) => ids.has(e.id))
+    return filtradas.length > 0 ? filtradas : especialidades
+  }, [especialidades, entrada, profesional])
 
-  // Tras identificarse, si vino `?servicio=` desde la ficha de detalle salta
-  // directo a "profesional" con ese tratamiento precargado; si no, pasa por
-  // "servicio" con el listado completo.
-  function avanzarTrasIdentificacion() {
-    const slugPedido = parametros.get("servicio")
-    const encontrado =
-      slugPedido &&
-      tratamientos?.find(
-        (t) => t.slug === slugPedido || String(t.id) === slugPedido
+  const tratamientosDeLaEspecialidad = useMemo(() => {
+    if (especialidadElegidaId == null) return []
+    return (
+      especialidades?.find((e) => e.id === especialidadElegidaId)
+        ?.tratamientos ?? []
+    )
+  }, [especialidades, especialidadElegidaId])
+
+  function elegirEntrada(nueva: EntradaReserva) {
+    setEntrada(nueva)
+    if (nueva === "especialidad") setPaso("especialidad-lista")
+    else if (nueva === "profesional") setPaso("profesional-lista")
+    else setPaso("sucursal-lista")
+  }
+
+  function elegirSucursal(seleccionada: Sucursal) {
+    setSucursalState(seleccionada)
+    setPaso("especialidad-lista")
+  }
+
+  function elegirProfesionalDeLista(seleccionado: Profesional) {
+    setProfesionalState(seleccionado)
+    setPaso("especialidad-lista")
+  }
+
+  /**
+   * Único punto donde se fija la especialidad a partir de la cual se
+   * consulta disponibilidad (entradas Especialidad/Profesional/Sucursal).
+   * El tratamiento puntual queda sin resolver hasta después de elegir
+   * horario — ver "tratamiento-especifico" y `elegirTratamientoEspecifico`.
+   */
+  function elegirEspecialidad(especialidad: EspecialidadPublica) {
+    setEspecialidadElegidaId(especialidad.id)
+    setTratamientoState(null)
+    setSlots([])
+    setSlotSeleccionado(null)
+    setPaso("disponibilidad")
+
+    void cargarProfesionales({ sucursalId: sucursal?.id, forzar: true }).then(
+      (lista) => {
+        void buscarDisponibilidad(
+          fecha,
+          { especialidadId: especialidad.id },
+          lista ?? []
+        )
+      }
+    )
+  }
+
+  /**
+   * Único camino que fija el tratamiento ANTES de ver disponibilidad: el
+   * atajo `?servicio=` (ficha de un tratamiento puntual del catálogo). Ver
+   * nota del hook sobre por qué las otras tres entradas no pasan por acá.
+   */
+  function elegirTratamientoDelCatalogo(
+    seleccionado: TratamientoDeEspecialidad
+  ) {
+    setTratamientoState(seleccionado)
+    setSlots([])
+    setSlotSeleccionado(null)
+    setPaso("disponibilidad")
+
+    void cargarProfesionales({
+      treatmentId: seleccionado.id,
+      forzar: true,
+    }).then((lista) => {
+      void buscarDisponibilidad(
+        fecha,
+        { treatmentId: seleccionado.id },
+        lista ?? []
       )
+    })
+  }
 
-    if (encontrado) {
-      setTratamientoState(encontrado)
-      setPaso("profesional")
-      void cargarProfesionales({ treatmentId: encontrado.id, forzar: true })
+  // Si se entró por Profesional y ese profesional cubre una sola
+  // especialidad, no tiene sentido preguntar cuál: se aplica sola apenas
+  // el catálogo de especialidades está listo. `.current` solo se marca
+  // `true` al aplicarlo, para no interceptar un "Volver" manual del
+  // paciente a este paso más tarde (ej. si vuelve para elegir otra
+  // especialidad de las que sí cubre, en el caso con más de una).
+  const especialidadUnicaAplicada = useRef(false)
+  useEffect(() => {
+    if (paso !== "especialidad-lista" || entrada !== "profesional") return
+    if (especialidadUnicaAplicada.current || !profesional || !especialidades) {
       return
     }
-    setPaso("servicio")
+    const propias = profesional.especialidades ?? []
+    if (propias.length !== 1) return
+    const resuelta = especialidades.find((e) => e.id === propias[0].id)
+    if (!resuelta) return
+    especialidadUnicaAplicada.current = true
+    elegirEspecialidad(resuelta)
+    // `elegirEspecialidad` se recrea cada render; el guard por `ref` ya
+    // evita cualquier reejecución indebida de este efecto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paso, entrada, profesional, especialidades])
+
+  async function cambiarFecha(nuevaFecha: string) {
+    setFechaState(nuevaFecha)
+    setSlotSeleccionado(null)
+    if (tratamiento) {
+      await buscarDisponibilidad(nuevaFecha, { treatmentId: tratamiento.id })
+    } else if (especialidadElegidaId != null) {
+      await buscarDisponibilidad(nuevaFecha, {
+        especialidadId: especialidadElegidaId,
+      })
+    }
   }
+
+  // Si el tratamiento ya viene fijo (atajo `?servicio=`), elegir un horario
+  // va directo a Identificación — ya no hace falta elegir tratamiento. Si
+  // no (las otras tres entradas), primero hay que resolver cuál tratamiento
+  // puntual de la especialidad es, recién ahí se identifica el paciente.
+  function seleccionarSlot(slot: SlotConProfesional) {
+    setSlotSeleccionado(slot)
+    setSlotYaNoDisponible(false)
+    setErrorCita(null)
+    setPaso(tratamiento ? "identificacion" : "tratamiento-especifico")
+  }
+
+  function elegirTratamientoEspecifico(seleccionado: TratamientoDeEspecialidad) {
+    setTratamientoState(seleccionado)
+    setPaso("identificacion")
+  }
+
+  // Atajos por URL, aplicados una sola vez apenas se monta el wizard:
+  // `?servicio=<slug>` (desde la ficha de un tratamiento) fija ese
+  // tratamiento y salta directo a Disponibilidad. `?profesional=<id>`
+  // (desde la ficha de un profesional en el directorio del equipo) entra
+  // por "profesional" con ese profesional ya resuelto, saltando a
+  // "especialidad-lista" (que a su vez se auto-resuelve sola si ese
+  // profesional cubre una única especialidad, ver el efecto de arriba).
+  const atajoAplicado = useRef(false)
+  useEffect(() => {
+    if (atajoAplicado.current || paso !== "inicio") return
+
+    const idProfesional = parametros.get("profesional")
+    if (idProfesional) {
+      atajoAplicado.current = true
+      setEntrada("profesional")
+      void cargarProfesionales({ forzar: true }).then((lista) => {
+        const encontrado = lista?.find((p) => String(p.id) === idProfesional)
+        if (encontrado) {
+          setProfesionalState(encontrado)
+          setPaso("especialidad-lista")
+        } else {
+          // No se encontró ese id (o falló la carga): se ve la lista real,
+          // sin dejar al paciente en un callejón sin salida.
+          setPaso("profesional-lista")
+        }
+      })
+      return
+    }
+
+    const slugServicio = parametros.get("servicio")
+    if (slugServicio && tratamientos) {
+      const encontrado = tratamientos.find(
+        (t) => t.slug === slugServicio || String(t.id) === slugServicio
+      )
+      if (encontrado) {
+        atajoAplicado.current = true
+        setEntrada("especialidad")
+        elegirTratamientoDelCatalogo(encontrado)
+      }
+    }
+    // `cargarProfesionales`/`elegirTratamientoDelCatalogo` dependen de
+    // estado que este efecto no necesita re-observar (el atajo se aplica
+    // una sola vez, `ref` ya lo garantiza); solo importa que `tratamientos`
+    // haya llegado.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paso, parametros, tratamientos])
 
   async function verificarRutYAvanzar(
     rutIngresado: string,
@@ -289,7 +547,10 @@ export function useReservaWizard() {
     try {
       const existe = await verificarRut(rutNormalizado, turnstileToken)
       setPacienteExiste(existe)
-      if (existe) avanzarTrasIdentificacion()
+      // Tratamiento/profesional/horario ya están elegidos antes de llegar
+      // acá (identificación ahora es el paso previo a confirmar): si el
+      // paciente ya existe, se avanza directo.
+      if (existe) setPaso("confirmar")
     } catch (error) {
       setPacienteExiste(null)
       setErrorVerificarRut(
@@ -310,7 +571,7 @@ export function useReservaWizard() {
     setErrorAltaPaciente(null)
     try {
       await crearPaciente({ rut, ...datos })
-      avanzarTrasIdentificacion()
+      setPaso("confirmar")
     } catch (error) {
       setErrorAltaPaciente(
         error instanceof ApiError
@@ -322,85 +583,10 @@ export function useReservaWizard() {
     }
   }
 
-  function elegirTratamiento(seleccionado: TratamientoDeEspecialidad) {
-    const cambioDeTratamiento = tratamiento?.id !== seleccionado.id
-    setTratamientoState(seleccionado)
-    setProfesionalState(null)
-    setCualquieraDisponible(false)
-    setSlots([])
-    setSlotSeleccionado(null)
-    setPaso("profesional")
-    // La lista de profesionales depende del tratamiento (la API la filtra
-    // por especialidad vía `treatment_id`): si cambia el tratamiento hay
-    // que invalidar el cache y volver a pedirla, no arrastrar la del
-    // tratamiento anterior.
-    if (cambioDeTratamiento) {
-      setProfesionales(null)
-      void cargarProfesionales({ treatmentId: seleccionado.id, forzar: true })
-    } else if (profesionales === null) {
-      void cargarProfesionales({ treatmentId: seleccionado.id })
-    }
-  }
-
-  async function elegirProfesionalEspecifico(seleccionado: Profesional) {
-    setProfesionalState(seleccionado)
-    setCualquieraDisponible(false)
-    setSlotSeleccionado(null)
-    setPaso("horario")
-    await buscarDisponibilidad(fecha, seleccionado, false)
-  }
-
-  // Atajo `?profesional=<id>` (desde la ficha del equipo): el paciente ya
-  // eligió con quién quiere atenderse, pero igual tiene que elegir qué
-  // tratamiento necesita primero (la lista de profesionales depende de
-  // eso). En cuanto la lista de profesionales para ese tratamiento carga,
-  // si el profesional pedido está en ella, se salta el paso "profesional"
-  // solo — si no cubre ese tratamiento, no pasa nada: se ve la lista real.
-  // `.current` solo se marca `true` al aplicarlo, para no interceptar un
-  // "Volver" manual del paciente a este paso más tarde.
-  const profesionalPreseleccionadoAplicado = useRef(false)
-  useEffect(() => {
-    if (paso !== "profesional" || !profesionales) return
-    if (profesionalPreseleccionadoAplicado.current) return
-    const idPedido = parametros.get("profesional")
-    if (!idPedido) return
-    const encontrado = profesionales.find((p) => String(p.id) === idPedido)
-    if (!encontrado) return
-    profesionalPreseleccionadoAplicado.current = true
-    void elegirProfesionalEspecifico(encontrado)
-    // `parametros` (de useSearchParams) y `elegirProfesionalEspecifico` son
-    // estables en la práctica para lo que le importa a este efecto (el id
-    // pedido en la URL no cambia dentro de una misma sesión del wizard); el
-    // guard por `ref` ya evita cualquier reejecución indebida.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paso, profesionales])
-
-  async function elegirCualquieraDisponible() {
-    setProfesionalState(null)
-    setCualquieraDisponible(true)
-    setSlotSeleccionado(null)
-    setPaso("horario")
-    const lista = profesionales ?? (await cargarProfesionales())
-    await buscarDisponibilidad(fecha, null, true, lista ?? [])
-  }
-
-  async function cambiarFecha(nuevaFecha: string) {
-    setFechaState(nuevaFecha)
-    setSlotSeleccionado(null)
-    await buscarDisponibilidad(nuevaFecha, profesional, cualquieraDisponible)
-  }
-
   function volverAPaso(destino: PasoReserva) {
     setErrorCita(null)
     setSlotYaNoDisponible(false)
     setPaso(destino)
-  }
-
-  function seleccionarSlot(slot: SlotConProfesional) {
-    setSlotSeleccionado(slot)
-    setSlotYaNoDisponible(false)
-    setErrorCita(null)
-    setPaso("confirmar")
   }
 
   async function confirmarReserva(turnstileToken: string) {
@@ -422,12 +608,14 @@ export function useReservaWizard() {
       setPaso("exito")
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
-        // El slot ya no está libre: refresca la disponibilidad y ofrece
-        // el siguiente horario sin reiniciar el flujo completo.
+        // El slot ya no está libre: refresca la disponibilidad (ahora con
+        // el tratamiento puntual ya resuelto, no la aproximación por
+        // especialidad) y ofrece el siguiente horario sin reiniciar el
+        // flujo completo.
         setSlotYaNoDisponible(true)
         setSlotSeleccionado(null)
-        setPaso("horario")
-        await buscarDisponibilidad(fecha, profesional, cualquieraDisponible)
+        setPaso("disponibilidad")
+        await buscarDisponibilidad(fecha, { treatmentId: tratamiento.id })
       } else if (error instanceof ApiError) {
         setErrorCita(error.message)
       } else {
@@ -439,14 +627,16 @@ export function useReservaWizard() {
   }
 
   function reiniciar() {
-    setPaso("identificacion")
+    setPaso("inicio")
+    setEntrada(null)
     setRut(null)
     setPacienteExiste(null)
     setErrorVerificarRut(null)
     setErrorAltaPaciente(null)
     setTratamientoState(null)
     setProfesionalState(null)
-    setCualquieraDisponible(false)
+    setSucursalState(null)
+    setEspecialidadElegidaId(null)
     setSlots([])
     setSlotSeleccionado(null)
     setNotas("")
@@ -458,6 +648,14 @@ export function useReservaWizard() {
   return {
     paso,
     setPaso,
+    entrada,
+    elegirEntrada,
+    pasosVisibles,
+    sucursales,
+    cargandoSucursales,
+    errorSucursales,
+    sucursal,
+    elegirSucursal,
     rut,
     verificandoRut,
     errorVerificarRut,
@@ -467,18 +665,18 @@ export function useReservaWizard() {
     errorAltaPaciente,
     crearPacienteYAvanzar,
     tratamiento,
-    elegirTratamiento,
-    especialidades,
+    opcionesEspecialidad,
     cargandoEspecialidades,
     errorEspecialidades,
-    otrosTratamientos,
+    especialidadElegidaId,
+    elegirEspecialidad,
+    tratamientosDeLaEspecialidad,
+    elegirTratamientoEspecifico,
     profesionales,
     cargandoProfesionales,
     errorProfesionales,
     profesional,
-    cualquieraDisponible,
-    elegirProfesionalEspecifico,
-    elegirCualquieraDisponible,
+    elegirProfesionalDeLista,
     fecha,
     cambiarFecha,
     slots,
