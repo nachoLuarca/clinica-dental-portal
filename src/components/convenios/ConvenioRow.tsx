@@ -1,5 +1,5 @@
-import { useState } from "react"
 import { HeartHandshake } from "lucide-react"
+import { useImagenValida } from "@/hooks/useImagenValida"
 import { formatTipoConvenio } from "@/lib/format"
 import type { Convenio } from "@/types/convenios"
 
@@ -13,8 +13,7 @@ interface ConvenioRowProps {
  * No es una tarjeta clicable — el convenio no tiene ficha propia.
  */
 export function ConvenioRow({ convenio }: ConvenioRowProps) {
-  const [logoRoto, setLogoRoto] = useState(false)
-  const mostrarLogo = Boolean(convenio.logo_url) && !logoRoto
+  const { mostrar: mostrarLogo, onError } = useImagenValida(convenio.logo_url)
 
   return (
     <div className="flex items-center gap-4 py-5 sm:gap-6">
@@ -24,7 +23,7 @@ export function ConvenioRow({ convenio }: ConvenioRowProps) {
             src={convenio.logo_url ?? undefined}
             alt={convenio.nombre}
             className="size-full object-contain p-1.5"
-            onError={() => setLogoRoto(true)}
+            onError={onError}
           />
         ) : (
           <HeartHandshake className="size-6" />

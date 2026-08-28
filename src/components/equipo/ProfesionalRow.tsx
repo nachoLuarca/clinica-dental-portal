@@ -1,7 +1,7 @@
-import { useState } from "react"
 import { Link } from "react-router-dom"
 import { CalendarCheck, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useImagenValida } from "@/hooks/useImagenValida"
 import type { Profesional } from "@/types/reserva"
 
 interface ProfesionalRowProps {
@@ -9,8 +9,9 @@ interface ProfesionalRowProps {
 }
 
 export function ProfesionalRow({ profesional }: ProfesionalRowProps) {
-  const [fotoRota, setFotoRota] = useState(false)
-  const mostrarFoto = Boolean(profesional.foto_url) && !fotoRota
+  const { mostrar: mostrarFoto, onError } = useImagenValida(
+    profesional.foto_url
+  )
   const nombreCompleto = [profesional.nombre, profesional.apellido]
     .filter(Boolean)
     .join(" ")
@@ -26,7 +27,7 @@ export function ProfesionalRow({ profesional }: ProfesionalRowProps) {
             src={profesional.foto_url ?? undefined}
             alt={nombreCompleto}
             className="size-full object-cover"
-            onError={() => setFotoRota(true)}
+            onError={onError}
           />
         ) : (
           <UserRound className="size-7" />

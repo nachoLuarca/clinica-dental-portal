@@ -3,6 +3,7 @@ import { Link, NavLink } from "react-router-dom"
 import { LogOut, Menu, Smile, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
+import { useImagenValida } from "@/hooks/useImagenValida"
 import { useTenantBranding } from "@/hooks/useTenantBranding"
 import { cn } from "@/lib/utils"
 
@@ -19,12 +20,13 @@ const enlaces = [
 
 export function Navbar() {
   const [abierto, setAbierto] = useState(false)
-  const [logoRoto, setLogoRoto] = useState(false)
   const { autenticado, paciente, cerrarSesion } = useAuth()
   const { marca } = useTenantBranding()
+  const { mostrar: mostrarLogo, onError: onErrorLogo } = useImagenValida(
+    marca?.logo_url
+  )
   const primerNombre = paciente?.nombre?.split(" ")[0]
   const nombreClinica = marca?.nombre ?? NOMBRE_CLINICA_POR_DEFECTO
-  const mostrarLogo = Boolean(marca?.logo_url) && !logoRoto
 
   function manejarCerrarSesion() {
     setAbierto(false)
@@ -44,7 +46,7 @@ export function Navbar() {
               src={marca?.logo_url ?? undefined}
               alt={nombreClinica}
               className="size-9 rounded-full object-cover"
-              onError={() => setLogoRoto(true)}
+              onError={onErrorLogo}
             />
           ) : (
             <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">

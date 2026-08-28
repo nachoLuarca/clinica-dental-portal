@@ -1,6 +1,6 @@
-import { useState } from "react"
 import { ArrowRight, UserRound } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useImagenValida } from "@/hooks/useImagenValida"
 import type { ApiError } from "@/lib/http-client"
 import type { Profesional } from "@/types/reserva"
 
@@ -18,8 +18,9 @@ function FilaProfesional({
   profesional: Profesional
   onElegir: (p: Profesional) => void
 }) {
-  const [fotoRota, setFotoRota] = useState(false)
-  const mostrarFoto = Boolean(profesional.foto_url) && !fotoRota
+  const { mostrar: mostrarFoto, onError } = useImagenValida(
+    profesional.foto_url
+  )
   const nombreCompleto = [profesional.nombre, profesional.apellido]
     .filter(Boolean)
     .join(" ")
@@ -39,7 +40,7 @@ function FilaProfesional({
             src={profesional.foto_url ?? undefined}
             alt={nombreCompleto}
             className="size-full object-cover"
-            onError={() => setFotoRota(true)}
+            onError={onError}
           />
         ) : (
           <UserRound className="size-5" />
