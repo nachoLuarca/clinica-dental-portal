@@ -2,7 +2,6 @@ import { lazy, Suspense } from "react"
 import { Route, Routes } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import { SiteLayout } from "@/components/layout/SiteLayout"
-import { RutaProtegida } from "@/components/auth/RutaProtegida"
 import { NotFoundPage } from "@/pages/NotFoundPage"
 
 // Paginas cargadas por separado (code-splitting por ruta): el bundle
@@ -30,15 +29,6 @@ const SucursalesPage = lazy(() =>
 )
 const EquipoPage = lazy(() =>
   import("@/pages/EquipoPage").then((m) => ({ default: m.EquipoPage }))
-)
-const IngresarPage = lazy(() =>
-  import("@/pages/IngresarPage").then((m) => ({ default: m.IngresarPage }))
-)
-const RegistroPage = lazy(() =>
-  import("@/pages/RegistroPage").then((m) => ({ default: m.RegistroPage }))
-)
-const CuentaPage = lazy(() =>
-  import("@/pages/CuentaPage").then((m) => ({ default: m.CuentaPage }))
 )
 const ReservaPage = lazy(() =>
   import("@/pages/ReservaPage").then((m) => ({ default: m.ReservaPage }))
@@ -68,11 +58,6 @@ function App() {
           <Route path="equipo" element={<EquipoPage />} />
           <Route path="reservar" element={<ReservaPage />} />
           <Route path="mis-horas" element={<MisHorasPage />} />
-          <Route path="ingresar" element={<IngresarPage />} />
-          <Route path="registro" element={<RegistroPage />} />
-          <Route element={<RutaProtegida />}>
-            <Route path="cuenta" element={<CuentaPage />} />
-          </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
