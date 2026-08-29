@@ -1,5 +1,4 @@
 import { env } from "@/lib/env"
-import { obtenerToken } from "@/lib/session"
 
 // El backend local en Windows/WSL2 mide 2-8s de variabilidad por I/O del
 // bind mount incluso contra 127.0.0.1 (diagnosticado por el equipo de
@@ -33,8 +32,6 @@ export class ApiError extends Error {
 interface OpcionesPeticion {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
   body?: unknown
-  /** Adjunta el header `Authorization: Bearer <token>` de la sesión actual. */
-  autenticado?: boolean
   /** Adjunta el header `X-Clinica` con el slug del tenant (rutas públicas). */
   incluirClinica?: boolean
   headers?: Record<string, string>
@@ -61,8 +58,8 @@ async function extraerCuerpoError(response: Response): Promise<{
 
 /**
  * Cliente HTTP centralizado para `clinica-dental-api`. Capa reusable por
- * todos los módulos del sitio (auth, reserva, gestión por RUT) — evita
- * `fetch` disperso y homogeniza el manejo de errores y timeouts.
+ * todos los módulos del sitio (reserva, gestión por RUT) — evita `fetch`
+ * disperso y homogeniza el manejo de errores y timeouts.
  */
 export async function apiFetch<T>(
   path: string,
@@ -71,7 +68,6 @@ export async function apiFetch<T>(
   const {
     method = "GET",
     body,
-    autenticado = false,
     incluirClinica = false,
     headers = {},
     timeoutMs = TIMEOUT_MS_POR_DEFECTO,
@@ -91,13 +87,6 @@ export async function apiFetch<T>(
 
   if (incluirClinica) {
     cabeceras["X-Clinica"] = env.clinicaSlug
-  }
-
-  if (autenticado) {
-    const token = obtenerToken()
-    if (token) {
-      cabeceras.Authorization = `Bearer ${token}`
-    }
   }
 
   let response: Response

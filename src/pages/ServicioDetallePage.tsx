@@ -6,12 +6,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { iconoDeEspecialidad } from "@/components/servicios/EspecialidadIcono"
 import { formatClp, formatDuracion } from "@/lib/format"
 import { useServicio } from "@/hooks/useServicios"
-import { useAuth } from "@/hooks/useAuth"
 
 export function ServicioDetallePage() {
   const { slug } = useParams<{ slug: string }>()
   const { datos: servicio, cargando, error } = useServicio(slug)
-  const { autenticado } = useAuth()
 
   if (cargando) {
     return (
@@ -111,12 +109,10 @@ export function ServicioDetallePage() {
               Reservar este tratamiento
             </Link>
           </Button>
-          {!autenticado && (
-            <p className="mt-2 text-center text-xs text-muted-foreground">
-              Puedes revisar horarios sin iniciar sesión; te pedimos cuenta
-              recién al confirmar tu hora.
-            </p>
-          )}
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Puedes revisar horarios sin iniciar sesión; te pedimos tu RUT
+            recién al confirmar tu hora.
+          </p>
         </aside>
       </div>
     </section>
